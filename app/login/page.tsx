@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
+import Link from "next/link";
 
 export default function LoginPage() {
   const router = useRouter();
@@ -52,6 +53,12 @@ export default function LoginPage() {
         <button className="w-full border rounded p-2" disabled={loading} type="submit">
           {loading ? "Signing in..." : "Sign in"}
         </button>
+        <p className="text-sm mt-3">
+          Don&apos;t have an account?{" "}
+          <Link href="/signup" className="underline">
+            Sign up
+          </Link>
+        </p>
 
         {msg && <p className="text-sm">{msg}</p>}
       </form>
