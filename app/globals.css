@@ -1,26 +1,135 @@
 @import "tailwindcss";
 
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  --background: #f6f1e8;
+  --foreground: #1f2a1f;
+  --surface: rgba(255, 252, 246, 0.82);
+  --surface-strong: #fffdf9;
+  --border: rgba(49, 72, 52, 0.14);
+  --muted: #5d685c;
+  --accent: #2f6b4f;
+  --accent-strong: #1f4d39;
+  --accent-soft: #dcefe3;
+  --warm: #efdfc8;
 }
 
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
+  --font-sans: "Avenir Next", "Segoe UI", "Helvetica Neue", sans-serif;
+  --font-mono: "SFMono-Regular", "Consolas", monospace;
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+* {
+  box-sizing: border-box;
+}
+
+html {
+  scroll-behavior: smooth;
 }
 
 body {
-  background: var(--background);
+  min-height: 100vh;
+  background:
+    radial-gradient(circle at top, rgba(250, 214, 163, 0.35), transparent 30%),
+    radial-gradient(circle at 85% 15%, rgba(142, 186, 160, 0.22), transparent 25%),
+    linear-gradient(180deg, #f8f4ec 0%, #f4efe5 38%, #f3eee4 100%);
   color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  font-family: "Avenir Next", "Segoe UI", "Helvetica Neue", sans-serif;
+}
+
+a,
+button,
+input,
+textarea {
+  transition:
+    background-color 160ms ease,
+    border-color 160ms ease,
+    color 160ms ease,
+    box-shadow 160ms ease,
+    opacity 160ms ease,
+    transform 160ms ease;
+}
+
+::selection {
+  background: rgba(47, 107, 79, 0.18);
+}
+
+@layer base {
+  h1,
+  h2,
+  h3,
+  h4 {
+    font-family: Georgia, "Times New Roman", serif;
+    letter-spacing: -0.02em;
+  }
+}
+
+@layer components {
+  .shell {
+    @apply mx-auto w-full max-w-7xl px-4 sm:px-6 lg:px-8;
+  }
+
+  .panel {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    box-shadow: 0 18px 50px rgba(64, 53, 33, 0.08);
+    backdrop-filter: blur(18px);
+    @apply rounded-[28px];
+  }
+
+  .panel-strong {
+    background: var(--surface-strong);
+    border: 1px solid var(--border);
+    box-shadow: 0 20px 60px rgba(64, 53, 33, 0.12);
+    @apply rounded-[28px];
+  }
+
+  .section-title {
+    @apply text-3xl font-semibold sm:text-4xl;
+  }
+
+  .eyebrow {
+    color: var(--accent-strong);
+    background: rgba(220, 239, 227, 0.8);
+    border: 1px solid rgba(47, 107, 79, 0.14);
+    @apply inline-flex items-center rounded-full px-3 py-1 text-xs font-semibold uppercase tracking-[0.22em];
+  }
+
+  .btn-primary {
+    background: linear-gradient(135deg, var(--accent) 0%, var(--accent-strong) 100%);
+    color: white;
+    box-shadow: 0 16px 30px rgba(31, 77, 57, 0.22);
+    @apply inline-flex items-center justify-center rounded-full px-5 py-3 text-sm font-semibold;
+  }
+
+  .btn-primary:hover {
+    transform: translateY(-1px);
+  }
+
+  .btn-secondary {
+    background: rgba(255, 255, 255, 0.75);
+    border: 1px solid var(--border);
+    color: var(--foreground);
+    @apply inline-flex items-center justify-center rounded-full px-5 py-3 text-sm font-semibold;
+  }
+
+  .btn-secondary:hover {
+    background: rgba(255, 255, 255, 0.95);
+  }
+
+  .field {
+    background: rgba(255, 255, 255, 0.85);
+    border: 1px solid rgba(49, 72, 52, 0.16);
+    @apply w-full rounded-2xl px-4 py-3 outline-none;
+  }
+
+  .field:focus {
+    border-color: rgba(47, 107, 79, 0.45);
+    box-shadow: 0 0 0 4px rgba(47, 107, 79, 0.1);
+  }
+
+  .muted {
+    color: var(--muted);
+  }
 }

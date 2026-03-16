@@ -51,9 +51,9 @@ export default function ProfileSettingsPage() {
         return;
       }
 
-      const p = data as Profile;
-      setProfile(p);
-      setDisplayName(p.display_name ?? "");
+      const nextProfile = data as Profile;
+      setProfile(nextProfile);
+      setDisplayName(nextProfile.display_name ?? "");
       setLoading(false);
     })();
   }, [supabase]);
@@ -64,7 +64,6 @@ export default function ProfileSettingsPage() {
     setMsg(null);
 
     const cleaned = displayName.trim();
-
     if (cleaned.length < 3) {
       setSaving(false);
       setMsg("Display name must be at least 3 characters.");
@@ -79,8 +78,7 @@ export default function ProfileSettingsPage() {
     setSaving(false);
 
     if (error) {
-      // Unique violation
-      if ((error as any).code === "23505") {
+      if ((error as { code?: string }).code === "23505") {
         setMsg("That display name is already taken. Try another.");
       } else {
         setMsg(error.message);
@@ -92,46 +90,58 @@ export default function ProfileSettingsPage() {
     setProfile({ ...profile, display_name: cleaned });
   }
 
-  if (loading) return <div className="p-6 text-sm opacity-70">Loading…</div>;
+  if (loading) {
+    return (
+      <main className="shell py-6 sm:py-10">
+        <div className="panel max-w-3xl px-6 py-4 text-sm muted">Loading...</div>
+      </main>
+    );
+  }
 
   return (
-    <main className="p-6 max-w-xl space-y-4">
-      <h1 className="text-2xl font-semibold">Profile</h1>
-
-      {msg && <div className="text-sm border rounded p-3">{msg}</div>}
-
-      {!profile ? (
-        <div className="text-sm opacity-70">No profile found.</div>
-      ) : (
+    <main className="shell py-6 sm:py-10">
+      <section className="panel mx-auto max-w-3xl space-y-6 px-6 py-8 sm:px-8">
         <div className="space-y-3">
-          <div className="text-sm opacity-80">
-            Role:{" "}
-            <span className="inline-block text-xs border rounded px-2 py-0.5">
-              {roleLabel(profile.role)}
-            </span>
-          </div>
-
-          <label className="block text-sm font-medium">Display name</label>
-          <input
-            className="w-full border rounded p-2"
-            value={displayName}
-            onChange={(e) => setDisplayName(e.target.value)}
-            placeholder="e.g. CalmGutGuide"
-          />
-          <div className="text-xs opacity-70">
-            This is what others will see on your posts, comments, recipes, and blogs.
-          </div>
-
-          <button
-            className="border rounded px-3 py-2"
-            type="button"
-            onClick={save}
-            disabled={saving}
-          >
-            {saving ? "Saving…" : "Save"}
-          </button>
+          <span className="eyebrow">Member profile</span>
+          <h1 className="text-4xl font-semibold">Profile settings</h1>
+          <p className="max-w-2xl text-sm leading-6 muted">
+            Keep your display name and visible identity tidy so your forum posts, recipes, and future blog
+            contributions feel cohesive across the site.
+          </p>
         </div>
-      )}
+
+        {msg && <div className="rounded-[24px] border border-[var(--border)] bg-white/70 px-4 py-3 text-sm">{msg}</div>}
+
+        {!profile ? (
+          <div className="text-sm muted">No profile found.</div>
+        ) : (
+          <div className="space-y-5">
+            <div className="rounded-[24px] bg-[var(--accent-soft)]/55 px-5 py-4 text-sm">
+              <span className="muted">Current role</span>{" "}
+              <span className="ml-2 rounded-full bg-white/80 px-3 py-1 text-xs font-semibold">
+                {roleLabel(profile.role)}
+              </span>
+            </div>
+
+            <div>
+              <label className="mb-2 block text-sm font-semibold">Display name</label>
+              <input
+                className="field"
+                value={displayName}
+                onChange={(e) => setDisplayName(e.target.value)}
+                placeholder="e.g. CalmGutGuide"
+              />
+              <div className="mt-2 text-xs leading-5 muted">
+                This is what other members will see on your posts, comments, recipes, and future blogs.
+              </div>
+            </div>
+
+            <button className="btn-primary" type="button" onClick={save} disabled={saving}>
+              {saving ? "Saving..." : "Save profile"}
+            </button>
+          </div>
+        )}
+      </section>
     </main>
   );
 }

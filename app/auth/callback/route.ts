@@ -5,8 +5,7 @@ export async function GET(request: NextRequest) {
   const url = new URL(request.url);
   const code = url.searchParams.get("code");
 
-  // We'll redirect to home after exchanging the code
-  const response = NextResponse.redirect(new URL("/", request.url));
+  const response = NextResponse.redirect(new URL("/app", request.url));
 
   if (!code) {
     return response;

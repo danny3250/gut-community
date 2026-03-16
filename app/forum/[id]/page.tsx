@@ -1,10 +1,15 @@
+// ROLE NOTES:
+// - Role names + labels live in: lib/auth/roles.ts
+// - DB source: public.profiles.role (string)
+// - Only admin has elevated privileges right now
+
 "use client";
 
 import Link from "next/link";
 import { useEffect, useState } from "react";
 import { createClient } from "@/lib/supabase/client";
-
-type Role = "user" | "moderator" | "admin" | "doctor";
+import { Role } from "@/lib/auth/roles";
+import { RoleBadge } from "@/app/components/RoleBadge";
 
 type AuthorProfile = {
   display_name: string | null;
@@ -27,13 +32,21 @@ type CommentRow = {
   profiles: AuthorProfile | null;
 };
 
-function RoleBadge({ role }: { role: Role }) {
-  if (role === "user") return null;
+type RawPost = {
+  id: string;
+  title: string;
+  body: string;
+  created_at: string;
+  profiles: AuthorProfile | AuthorProfile[] | null;
+};
 
-  const label = role === "doctor" ? "Doctor" : role === "moderator" ? "Moderator" : "Admin";
-
-  return <span className="text-[10px] border rounded px-2 py-0.5">{label}</span>;
-}
+type RawComment = {
+  id: string;
+  body: string;
+  created_at: string;
+  created_by: string;
+  profiles: AuthorProfile | AuthorProfile[] | null;
+};
 
 export default function ForumPostPage({
   params,
@@ -44,13 +57,10 @@ export default function ForumPostPage({
 
   const [userId, setUserId] = useState<string | null>(null);
   const [postId, setPostId] = useState<string | null>(null);
-
   const [post, setPost] = useState<PostRow | null>(null);
   const [comments, setComments] = useState<CommentRow[]>([]);
-
   const [commentText, setCommentText] = useState("");
   const [msg, setMsg] = useState<string | null>(null);
-
   const [loading, setLoading] = useState(true);
   const [posting, setPosting] = useState(false);
 
@@ -63,8 +73,8 @@ export default function ForumPostPage({
 
   useEffect(() => {
     (async () => {
-      const p = await params;
-      setPostId(p.id);
+      const resolved = await params;
+      setPostId(resolved.id);
     })();
   }, [params]);
 
@@ -72,68 +82,52 @@ export default function ForumPostPage({
     setLoading(true);
     setMsg(null);
 
-    // --- POST ---
-    const { data: p, error: pErr } = await supabase
-        .from("forum_posts")
-        .select("id,title,body,created_at, profiles!forum_posts_created_by_fkey(display_name,role)")
-        .eq("id", id)
-        .single();
+    const { data: postData, error: postError } = await supabase
+      .from("forum_posts")
+      .select("id,title,body,created_at, profiles!forum_posts_created_by_fkey(display_name,role)")
+      .eq("id", id)
+      .single();
 
-
-    if (pErr || !p) {
-        setPost(null);
-        setComments([]);
-        setLoading(false);
-        setMsg(pErr?.message ?? "Post not found.");
-        return;
+    if (postError || !postData) {
+      setPost(null);
+      setComments([]);
+      setLoading(false);
+      setMsg(postError?.message ?? "Post not found.");
+      return;
     }
 
-    // Normalize profiles (can come back as object OR array depending on relationship inference)
-    const rawPProfile = (p as any).profiles;
-    const postProfile = Array.isArray(rawPProfile)
-        ? (rawPProfile[0] ?? null)
-        : (rawPProfile ?? null);
-
+    const rawPostProfile = (postData as RawPost).profiles;
     const normalizedPost: PostRow = {
-        id: (p as any).id,
-        title: (p as any).title,
-        body: (p as any).body,
-        created_at: (p as any).created_at,
-        profiles: postProfile,
+      id: (postData as RawPost).id,
+      title: (postData as RawPost).title,
+      body: (postData as RawPost).body,
+      created_at: (postData as RawPost).created_at,
+      profiles: Array.isArray(rawPostProfile) ? (rawPostProfile[0] ?? null) : (rawPostProfile ?? null),
     };
+    setPost(normalizedPost);
 
-    setPost(normalizedPost); // ✅ this replaces setPost(p as PostRow)
+    const { data: commentData, error: commentError } = await supabase
+      .from("forum_comments")
+      .select("id,body,created_at,created_by, profiles!forum_comments_created_by_fkey(display_name,role)")
+      .eq("post_id", id)
+      .order("created_at", { ascending: true });
 
-    // --- COMMENTS ---
-    const { data: c, error: cErr } = await supabase
-        .from("forum_comments")
-        .select("id,body,created_at,created_by, profiles!forum_comments_created_by_fkey(display_name,role)")
-        .eq("post_id", id)
-        .order("created_at", { ascending: true });
+    if (commentError) setMsg(commentError.message);
 
-
-    if (cErr) setMsg(cErr.message);
-
-    const normalizedComments: CommentRow[] = (c ?? []).map((row: any) => {
-        const rawCProfile = row.profiles;
-        const commentProfile = Array.isArray(rawCProfile)
-        ? (rawCProfile[0] ?? null)
-        : (rawCProfile ?? null);
-
-        return {
+    const normalizedComments: CommentRow[] = (commentData ?? []).map((row: RawComment) => {
+      const rawProfile = row.profiles;
+      return {
         id: row.id,
         body: row.body,
         created_at: row.created_at,
         created_by: row.created_by,
-        profiles: commentProfile,
-        };
+        profiles: Array.isArray(rawProfile) ? (rawProfile[0] ?? null) : (rawProfile ?? null),
+      };
     });
 
     setComments(normalizedComments);
-
     setLoading(false);
-    }
-
+  }
 
   useEffect(() => {
     if (!postId) return;
@@ -167,8 +161,8 @@ export default function ForumPostPage({
       return;
     }
 
-    const ok = await ensureDisplayName(userId);
-    if (!ok) {
+    const hasDisplayName = await ensureDisplayName(userId);
+    if (!hasDisplayName) {
       setPosting(false);
       window.location.href = "/settings/profile";
       return;
@@ -191,88 +185,83 @@ export default function ForumPostPage({
 
   if (!userId) {
     return (
-      <main className="p-6 space-y-3 max-w-3xl">
-        <h1 className="text-2xl font-semibold">Forum</h1>
-        <div className="text-sm border rounded p-3">
-          You must be logged in to view posts.
-        </div>
-        <Link className="underline" href="/login">
-          Go to login
-        </Link>
+      <main className="shell py-6 sm:py-10">
+        <section className="panel max-w-3xl space-y-4 px-6 py-8 sm:px-8">
+          <h1 className="text-3xl font-semibold">Forum</h1>
+          <div className="text-sm leading-6 muted">You must be logged in to view posts.</div>
+          <Link className="btn-primary" href="/login">
+            Go to login
+          </Link>
+        </section>
       </main>
     );
   }
 
   return (
-    <main className="p-6 max-w-3xl space-y-4">
-      <Link href="/forum" className="text-sm opacity-70 hover:opacity-100">
-        ← Back to Forum
+    <main className="shell max-w-4xl space-y-6 py-6 sm:py-10">
+      <Link href="/forum" className="text-sm muted hover:text-[var(--foreground)]">
+        Back to forum
       </Link>
 
       {loading ? (
-        <div className="text-sm opacity-70">Loading…</div>
+        <div className="panel px-5 py-4 text-sm muted">Loading...</div>
       ) : !post ? (
-        <div className="text-sm border rounded p-3">{msg ?? "Post not found."}</div>
+        <div className="panel px-5 py-4 text-sm">{msg ?? "Post not found."}</div>
       ) : (
         <>
-          <article className="border rounded-lg p-4">
-            <h1 className="text-2xl font-semibold">{post.title}</h1>
+          <article className="panel px-6 py-6">
+            <h1 className="text-3xl font-semibold">{post.title}</h1>
 
-            <div className="text-xs opacity-70 mt-1 flex items-center gap-2">
+            <div className="mt-2 flex items-center gap-2 text-xs opacity-70">
               <span>{post.profiles?.display_name ?? "Unknown"}</span>
               <RoleBadge role={post.profiles?.role ?? "user"} />
             </div>
 
-            <div className="text-xs opacity-60 mt-2">
+            <div className="mt-2 text-xs opacity-60">
               {new Date(post.created_at).toLocaleString()}
             </div>
 
-            <div className="mt-4 whitespace-pre-wrap">{post.body}</div>
+            <div className="mt-5 whitespace-pre-wrap text-sm leading-7 sm:text-base">{post.body}</div>
           </article>
 
-          <section className="border rounded-lg p-4 space-y-3">
+          <section className="panel space-y-4 px-6 py-6">
             <div className="font-medium">Comments</div>
 
             {comments.length === 0 ? (
-              <div className="text-sm opacity-70">No comments yet.</div>
+              <div className="text-sm muted">No comments yet.</div>
             ) : (
-              <div className="space-y-2">
-                {comments.map((c) => (
-                  <div key={c.id} className="border rounded p-3">
+              <div className="space-y-3">
+                {comments.map((comment) => (
+                  <div key={comment.id} className="rounded-[24px] border border-[var(--border)] bg-white/65 p-4">
                     <div className="flex items-center justify-between gap-3">
-                      <div className="text-xs opacity-70 flex items-center gap-2">
-                        <span>{c.profiles?.display_name ?? "Unknown"}</span>
-                        <RoleBadge role={c.profiles?.role ?? "user"} />
+                      <div className="flex items-center gap-2 text-xs opacity-70">
+                        <span>{comment.profiles?.display_name ?? "Unknown"}</span>
+                        <RoleBadge role={comment.profiles?.role ?? "user"} />
                       </div>
                       <div className="text-xs opacity-60">
-                        {new Date(c.created_at).toLocaleString()}
+                        {new Date(comment.created_at).toLocaleString()}
                       </div>
                     </div>
 
-                    <div className="whitespace-pre-wrap mt-2">{c.body}</div>
+                    <div className="mt-2 whitespace-pre-wrap text-sm leading-6">{comment.body}</div>
                   </div>
                 ))}
               </div>
             )}
 
-            <div className="pt-2 space-y-2">
+            <div className="space-y-3 pt-2">
               <textarea
-                className="w-full border rounded p-2 min-h-[100px]"
-                placeholder="Write a comment…"
+                className="field min-h-[120px]"
+                placeholder="Write a comment..."
                 value={commentText}
                 onChange={(e) => setCommentText(e.target.value)}
               />
 
-              <button
-                className="border rounded px-3 py-2"
-                type="button"
-                onClick={addComment}
-                disabled={posting}
-              >
-                {posting ? "Posting…" : "Add Comment"}
+              <button className="btn-primary" type="button" onClick={addComment} disabled={posting}>
+                {posting ? "Posting..." : "Add comment"}
               </button>
 
-              {msg && <div className="text-sm border rounded p-3">{msg}</div>}
+              {msg && <div className="rounded-2xl border border-[var(--border)] bg-white/70 p-3 text-sm">{msg}</div>}
             </div>
           </section>
         </>

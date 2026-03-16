@@ -1,115 +1,164 @@
-export type ParsedIngredient = {
-  line_no: number;
-  raw_line: string;
-  quantity: number | null;
-  unit: string | null;
-  item_name: string | null;
-  notes: string | null;
-  category: string | null; // ✅ added
+import { RecipeIngredientDraft } from "@/lib/recipes/types";
+
+const UNICODE_FRACTIONS: Record<string, string> = {
+  "¼": "1/4",
+  "½": "1/2",
+  "¾": "3/4",
+  "⅐": "1/7",
+  "⅑": "1/9",
+  "⅒": "1/10",
+  "⅓": "1/3",
+  "⅔": "2/3",
+  "⅕": "1/5",
+  "⅖": "2/5",
+  "⅗": "3/5",
+  "⅘": "4/5",
+  "⅙": "1/6",
+  "⅚": "5/6",
+  "⅛": "1/8",
+  "⅜": "3/8",
+  "⅝": "5/8",
+  "⅞": "7/8",
+  "Â¼": "1/4",
+  "Â½": "1/2",
+  "Â¾": "3/4",
+};
+
+const UNITS = [
+  "tsp",
+  "tsps",
+  "teaspoon",
+  "teaspoons",
+  "tbsp",
+  "tbsps",
+  "tablespoon",
+  "tablespoons",
+  "cup",
+  "cups",
+  "oz",
+  "ounce",
+  "ounces",
+  "lb",
+  "lbs",
+  "pound",
+  "pounds",
+  "g",
+  "kg",
+  "ml",
+  "l",
+  "clove",
+  "cloves",
+  "slice",
+  "slices",
+  "can",
+  "cans",
+  "package",
+  "packages",
+  "pinch",
+  "dash",
+];
+
+export type ParsedIngredient = RecipeIngredientDraft & {
   confidence: number;
 };
 
-
-// Very simple MVP parser:
-// - captures an optional leading quantity (including fractions like 1/2)
-// - captures an optional unit word
-// - remaining text becomes item_name/notes
 export function parseIngredientsText(text: string): ParsedIngredient[] {
-  const lines = text
+  return text
     .split("\n")
-    .map((l) => l.trim())
-    .filter(Boolean);
-
-  return lines.map((raw, idx) => parseLine(raw, idx + 1));
+    .map((line) => line.trim())
+    .filter(Boolean)
+    .map((line, index) => parseIngredientLine(line, index + 1));
 }
 
-function parseLine(raw: string, line_no: number): ParsedIngredient {
-  // Examples handled:
-  // "2 cups rice"
-  // "1/2 tsp salt"
-  // "1 lb chicken breast, diced"
-  // "salt to taste" -> quantity/unit null
-  const lower = raw.toLowerCase();
+export function parseIngredientLine(rawLine: string, sortOrder = 1): ParsedIngredient {
+  const normalized = normalizeFractions(rawLine.replace(/^[-*]\s+/, "").trim());
 
-  const qtyMatch = raw.match(/^(\d+(\.\d+)?|\d+\/\d+)\s+/);
-  let quantity: number | null = null;
-  let rest = raw;
+  let rest = normalized;
+  let quantityText: string | null = null;
+  let quantityNumeric: number | null = null;
 
-  if (qtyMatch) {
-    const qtyStr = qtyMatch[1];
-    quantity = parseQuantity(qtyStr);
-    rest = raw.slice(qtyMatch[0].length).trim();
+  const mixed = rest.match(/^(\d+\s+\d+\/\d+)\s+/);
+  const hyphenMixed = rest.match(/^(\d+-\d+\/\d+)\s+/);
+  const simple = rest.match(/^(\d+(\.\d+)?|\d+\/\d+)\s+/);
+
+  const quantityMatch = mixed?.[1] ?? hyphenMixed?.[1] ?? simple?.[1] ?? null;
+
+  if (quantityMatch) {
+    quantityText = quantityMatch.replace("-", " ");
+    quantityNumeric = parseIngredientQuantity(quantityText);
+    rest = rest.slice(quantityMatch.length).trim();
   }
 
-  // common units (extend anytime)
-  const units = [
-    "tsp",
-    "tbsp",
-    "cup",
-    "cups",
-    "oz",
-    "ounce",
-    "ounces",
-    "lb",
-    "lbs",
-    "pound",
-    "pounds",
-    "g",
-    "kg",
-    "ml",
-    "l",
-    "clove",
-    "cloves",
-    "pinch",
-    "dash",
-    "can",
-    "cans",
-    "slice",
-    "slices",
-    "package",
-    "packages",
-  ];
-
   let unit: string | null = null;
-  const firstWord = rest.split(/\s+/)[0]?.toLowerCase() ?? "";
-
-  if (units.includes(firstWord)) {
-    unit = firstWord;
+  const firstToken = rest.split(/\s+/)[0]?.toLowerCase() ?? "";
+  if (UNITS.includes(firstToken)) {
+    unit = firstToken;
     rest = rest.split(/\s+/).slice(1).join(" ").trim();
   }
 
-  // split notes by comma (simple)
-  let item_name: string | null = rest || null;
-  let notes: string | null = null;
+  let ingredientName = rest;
+  let preparationNote: string | null = null;
 
   if (rest.includes(",")) {
-    const [a, ...b] = rest.split(",");
-    item_name = a.trim() || null;
-    notes = b.join(",").trim() || null;
-  } else {
-    // detect "to taste" / "optional" as notes
-    if (lower.includes("to taste")) notes = "to taste";
-    if (lower.includes("optional")) notes = notes ? `${notes}; optional` : "optional";
+    const [name, ...noteParts] = rest.split(",");
+    ingredientName = name.trim();
+    preparationNote = noteParts.join(",").trim() || null;
+  } else if (/\bto taste\b/i.test(rest)) {
+    ingredientName = rest.replace(/\bto taste\b/i, "").trim() || rest;
+    preparationNote = "to taste";
   }
 
-  // confidence heuristic
-  let confidence = 0.5;
-  if (quantity !== null) confidence += 0.2;
-  if (unit !== null) confidence += 0.2;
-  if (item_name) confidence += 0.1;
-  confidence = Math.min(1, confidence);
+  const optionalFlag = /\boptional\b/i.test(rawLine);
+  if (optionalFlag && !preparationNote) {
+    preparationNote = "optional";
+  }
 
-  return { line_no, raw_line: raw, quantity, unit, item_name, notes, category: null, confidence };
+  let confidence = 0.45;
+  if (quantityText) confidence += 0.2;
+  if (unit) confidence += 0.2;
+  if (ingredientName) confidence += 0.15;
+
+  return {
+    sortOrder,
+    rawText: rawLine.trim(),
+    quantityNumeric,
+    quantityText,
+    unit,
+    ingredientName: ingredientName || rawLine.trim(),
+    preparationNote,
+    optionalFlag,
+    confidence: Math.min(confidence, 1),
+  };
 }
 
-function parseQuantity(q: string): number | null {
-  if (q.includes("/")) {
-    const [a, b] = q.split("/");
-    const num = Number(a);
-    const den = Number(b);
-    if (!isFinite(num) || !isFinite(den) || den === 0) return null;
-    return num / den;
+export function parseIngredientQuantity(value: string) {
+  const trimmed = normalizeFractions(value).trim();
+
+  const mixed = trimmed.match(/^(\d+)\s+(\d+)\/(\d+)$/);
+  if (mixed) {
+    return Number(mixed[1]) + Number(mixed[2]) / Number(mixed[3]);
   }
-  const n = Number(q);
-  return isFinite(n) ? n : null;
+
+  const fraction = trimmed.match(/^(\d+)\/(\d+)$/);
+  if (fraction) {
+    return Number(fraction[1]) / Number(fraction[2]);
+  }
+
+  const numeric = Number(trimmed);
+  return Number.isFinite(numeric) ? numeric : null;
+}
+
+function normalizeFractions(value: string) {
+  let output = value;
+
+  for (const [unicode, fraction] of Object.entries(UNICODE_FRACTIONS)) {
+    output = output.replace(new RegExp(`(\\d)${escapeRegExp(unicode)}`, "g"), `$1 ${fraction}`);
+    output = output.replaceAll(unicode, fraction);
+  }
+
+  return output;
+}
+
+function escapeRegExp(value: string) {
+  return value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 }

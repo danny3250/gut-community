@@ -1,10 +1,15 @@
+// ROLE NOTES:
+// - Role names + labels live in: lib/auth/roles.ts
+// - DB source: public.profiles.role (string)
+// - Only admin has elevated privileges right now
+
 "use client";
 
 import Link from "next/link";
 import { useEffect, useState } from "react";
 import { createClient } from "@/lib/supabase/client";
-
-type Role = "user" | "moderator" | "admin" | "doctor";
+import { Role } from "@/lib/auth/roles";
+import { RoleBadge } from "@/app/components/RoleBadge";
 
 type AuthorProfile = {
   display_name: string | null;
@@ -16,16 +21,8 @@ type ForumPostRow = {
   title: string;
   body: string;
   created_at: string;
-  profiles: AuthorProfile | null; // joined alias
+  profiles: AuthorProfile | null;
 };
-
-function RoleBadge({ role }: { role: Role }) {
-  if (role === "user") return null;
-
-  const label = role === "doctor" ? "Doctor" : role === "moderator" ? "Moderator" : "Admin";
-
-  return <span className="text-[10px] border rounded px-2 py-0.5">{label}</span>;
-}
 
 export default function ForumPage() {
   const supabase = createClient();
@@ -53,17 +50,16 @@ export default function ForumPage() {
         .order("created_at", { ascending: false })
         .limit(50);
 
-
       if (error) {
         setErr(error.message);
         setPosts([]);
         setLoading(false);
         return;
       }
-    // Transform the data to match ForumPostRow type
-      const transformedData = data?.map(post => ({
+
+      const transformedData = data?.map((post) => ({
         ...post,
-        profiles: Array.isArray(post.profiles) ? post.profiles[0] : post.profiles
+        profiles: Array.isArray(post.profiles) ? post.profiles[0] : post.profiles,
       }));
 
       setPosts((transformedData ?? []) as ForumPostRow[]);
@@ -73,32 +69,43 @@ export default function ForumPage() {
 
   if (!userId) {
     return (
-      <main className="p-6 space-y-3 max-w-3xl">
-        <h1 className="text-2xl font-semibold">Forum</h1>
-        <div className="text-sm border rounded p-3">
-          You must be logged in to view the forum.
-        </div>
+      <main className="shell py-6 sm:py-10">
+        <section className="panel max-w-3xl px-6 py-8 sm:px-8">
+          <span className="eyebrow">Member forum</span>
+          <h1 className="mt-4 text-3xl font-semibold">Sign in to view the forum</h1>
+          <p className="mt-4 text-sm leading-6 muted">
+            This area is already protected behind login, which gives you a strong foundation for a more
+            private and subscription-friendly community experience later on.
+          </p>
+        </section>
       </main>
     );
   }
 
   return (
-    <main className="p-6 space-y-4 max-w-3xl">
-      <header className="flex items-center justify-between gap-4">
-        <h1 className="text-2xl font-semibold">Forum</h1>
-        <Link className="border rounded px-3 py-2" href="/forum/new">
-          New Post
+    <main className="shell max-w-5xl space-y-6 py-6 sm:py-10">
+      <section className="panel flex flex-col gap-6 px-6 py-8 sm:px-8 lg:flex-row lg:items-end lg:justify-between">
+        <div className="max-w-2xl">
+          <span className="eyebrow">Community support</span>
+          <h1 className="mt-4 text-4xl font-semibold">Member forum</h1>
+          <p className="mt-3 text-sm leading-6 muted">
+            Conversations, support, and practical tips from people trying to feel better and eat with more
+            confidence.
+          </p>
+        </div>
+        <Link className="btn-primary" href="/forum/new">
+          Start a new post
         </Link>
-      </header>
+      </section>
 
-      {err && <div className="text-sm border rounded p-3">Error: {err}</div>}
+      {err && <div className="panel px-5 py-4 text-sm">Error: {err}</div>}
 
       {loading ? (
-        <div className="text-sm opacity-70">Loading…</div>
+        <div className="panel px-5 py-4 text-sm muted">Loading...</div>
       ) : posts.length === 0 ? (
-        <div className="text-sm opacity-70">No posts yet. Create the first one.</div>
+        <div className="panel px-5 py-4 text-sm muted">No posts yet. Create the first one.</div>
       ) : (
-        <div className="space-y-3">
+        <div className="grid gap-4">
           {posts.map((p) => {
             const author = p.profiles;
             const name = author?.display_name ?? "Unknown";
@@ -108,18 +115,18 @@ export default function ForumPage() {
               <Link
                 key={p.id}
                 href={`/forum/${p.id}`}
-                className="block border rounded-lg p-4 hover:bg-black/5 transition"
+                className="panel block px-5 py-5 hover:-translate-y-0.5"
               >
-                <div className="font-medium">{p.title}</div>
+                <div className="text-xl font-semibold">{p.title}</div>
 
-                <div className="text-xs opacity-70 mt-1 flex items-center gap-2">
+                <div className="mt-2 flex items-center gap-2 text-xs opacity-70">
                   <span>{name}</span>
                   <RoleBadge role={role} />
                 </div>
 
-                <div className="text-sm opacity-80 mt-2 line-clamp-2">{p.body}</div>
+                <div className="mt-3 line-clamp-2 text-sm leading-6 muted">{p.body}</div>
 
-                <div className="text-xs opacity-60 mt-2">
+                <div className="mt-4 text-xs opacity-60">
                   {new Date(p.created_at).toLocaleString()}
                 </div>
               </Link>

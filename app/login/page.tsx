@@ -1,67 +1,36 @@
-"use client";
+import { redirect } from "next/navigation";
+import { createClient } from "@/lib/supabase/server";
+import LoginForm from "@/app/components/LoginForm";
 
-import { useState } from "react";
-import { useRouter } from "next/navigation";
-import { createClient } from "@/lib/supabase/client";
-import Link from "next/link";
+export default async function LoginPage() {
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
 
-export default function LoginPage() {
-  const router = useRouter();
-  const supabase = createClient();
-
-  const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
-  const [msg, setMsg] = useState<string | null>(null);
-  const [loading, setLoading] = useState(false);
-
-  async function onSubmit(e: React.FormEvent) {
-    e.preventDefault();
-    setLoading(true);
-    setMsg(null);
-
-    const { error } = await supabase.auth.signInWithPassword({ email, password });
-
-    setLoading(false);
-    if (error) return setMsg(error.message);
-
-    router.push("/");
+  if (user) {
+    redirect("/app");
   }
 
   return (
-    <div className="min-h-screen flex items-center justify-center p-6">
-      <form onSubmit={onSubmit} className="w-full max-w-sm space-y-3">
-        <h1 className="text-xl font-semibold">Login</h1>
+    <main className="shell py-8 sm:py-12">
+      <div className="mx-auto grid max-w-5xl gap-6 lg:grid-cols-[0.9fr_1.1fr]">
+        <section className="panel px-6 py-8 sm:px-8">
+          <span className="eyebrow">Member access</span>
+          <h1 className="mt-4 text-4xl font-semibold">Sign in to your account</h1>
+          <p className="mt-4 text-sm leading-6 muted">
+            Return to your recipes, community discussions, and profile settings.
+          </p>
+          <div className="mt-8 rounded-[24px] bg-[var(--warm)]/60 p-5 text-sm leading-6 muted">
+            This sign-in flow is already wired to Supabase auth, so it is a good base for future paid
+            member areas and gated content.
+          </div>
+        </section>
 
-        <input
-          className="w-full border rounded p-2"
-          value={email}
-          onChange={(e) => setEmail(e.target.value)}
-          placeholder="Email"
-          type="email"
-          required
-        />
-
-        <input
-          className="w-full border rounded p-2"
-          value={password}
-          onChange={(e) => setPassword(e.target.value)}
-          placeholder="Password"
-          type="password"
-          required
-        />
-
-        <button className="w-full border rounded p-2" disabled={loading} type="submit">
-          {loading ? "Signing in..." : "Sign in"}
-        </button>
-        <p className="text-sm mt-3">
-          Don&apos;t have an account?{" "}
-          <Link href="/signup" className="underline">
-            Sign up
-          </Link>
-        </p>
-
-        {msg && <p className="text-sm">{msg}</p>}
-      </form>
-    </div>
+        <section className="panel-strong px-6 py-8 sm:px-8">
+          <LoginForm />
+        </section>
+      </div>
+    </main>
   );
 }

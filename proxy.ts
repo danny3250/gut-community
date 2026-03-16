@@ -1,7 +1,20 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createServerClient } from "@supabase/ssr";
 
-const PUBLIC_PATHS = ["/login", "/signup", "/verify", "/auth/callback"];
+const PROTECTED_PREFIXES = ["/app", "/admin", "/settings"];
+const AUTH_PAGES = ["/login", "/signup"];
+
+function isProtectedPath(pathname: string) {
+  return PROTECTED_PREFIXES.some(
+    (prefix) => pathname === prefix || pathname.startsWith(`${prefix}/`)
+  );
+}
+
+function isAuthPage(pathname: string) {
+  return AUTH_PAGES.some(
+    (prefix) => pathname === prefix || pathname.startsWith(`${prefix}/`)
+  );
+}
 
 export async function proxy(request: NextRequest) {
   const { pathname } = request.nextUrl;
@@ -9,8 +22,14 @@ export async function proxy(request: NextRequest) {
   if (
     pathname.startsWith("/_next") ||
     pathname.startsWith("/favicon.ico") ||
-    PUBLIC_PATHS.some((p) => pathname.startsWith(p))
+    pathname.includes(".")
   ) {
+    return NextResponse.next();
+  }
+
+  const needsSessionCheck = isProtectedPath(pathname) || isAuthPage(pathname);
+
+  if (!needsSessionCheck) {
     return NextResponse.next();
   }
 
@@ -33,19 +52,20 @@ export async function proxy(request: NextRequest) {
     }
   );
 
-  const { data } = await supabase.auth.getUser();
-  const user = data.user;
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
 
-  if (!user) {
-    const url = request.nextUrl.clone();
-    url.pathname = "/login";
-    return NextResponse.redirect(url);
+  if (isAuthPage(pathname) && user) {
+    return NextResponse.redirect(new URL("/app", request.url));
   }
 
-  if (!user.email_confirmed_at) {
-    const url = request.nextUrl.clone();
-    url.pathname = "/verify";
-    return NextResponse.redirect(url);
+  if (isProtectedPath(pathname) && !user) {
+    return NextResponse.redirect(new URL("/login", request.url));
+  }
+
+  if (isProtectedPath(pathname) && user && !user.email_confirmed_at) {
+    return NextResponse.redirect(new URL("/verify", request.url));
   }
 
   return response;

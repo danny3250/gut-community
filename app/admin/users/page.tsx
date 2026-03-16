@@ -1,3 +1,9 @@
+// ROLE NOTES:
+// - Role names + labels live in: lib/auth/roles.ts
+// - DB source: public.profiles.role (string)
+// - Only admin has elevated privileges right now
+
+
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
@@ -77,7 +83,7 @@ export default function AdminUsersPage() {
         return;
       }
 
-      setMeRole((meProfile as any).role as Role);
+      setMeRole((meProfile as { role: string }).role as Role);
 
       // Load all profiles (admins only should use this page)
       const { data, error } = await supabase
@@ -134,7 +140,7 @@ export default function AdminUsersPage() {
 
     if (error) {
       // unique violation
-      if ((error as any).code === "23505") {
+      if ('code' in error && error.code === "23505") {
         setErr("That display name is already taken.");
       } else {
         setErr(error.message);
