@@ -1,29 +1,27 @@
 import { redirect } from "next/navigation";
-import { createClient } from "@/lib/supabase/server";
+import { getCurrentUserWithRole, getHomePathForRole } from "@/lib/auth/session";
 import LoginForm from "@/app/components/LoginForm";
+import { BRAND } from "@/lib/config/brand";
 
 export default async function LoginPage() {
-  const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  const { user, role } = await getCurrentUserWithRole();
 
   if (user) {
-    redirect("/app");
+    redirect(getHomePathForRole(role));
   }
 
   return (
     <main className="shell py-8 sm:py-12">
       <div className="mx-auto grid max-w-5xl gap-6 lg:grid-cols-[0.9fr_1.1fr]">
         <section className="panel px-6 py-8 sm:px-8">
-          <span className="eyebrow">Member access</span>
+          <span className="eyebrow">CareBridge access</span>
           <h1 className="mt-4 text-4xl font-semibold">Sign in to your account</h1>
           <p className="mt-4 text-sm leading-6 muted">
-            Return to your recipes, community discussions, and profile settings.
+            Return to your portal, provider workspace, or admin area without having to start from zero.
           </p>
           <div className="mt-8 rounded-[24px] bg-[var(--warm)]/60 p-5 text-sm leading-6 muted">
-            This sign-in flow is already wired to Supabase auth, so it is a good base for future paid
-            member areas and gated content.
+            {BRAND.name} keeps care access, messaging, forms, resources, and telehealth-ready workflows connected
+            so patients and providers can move faster.
           </div>
         </section>
 

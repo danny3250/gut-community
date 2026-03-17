@@ -2,18 +2,16 @@
 
 import { useEffect, useState } from "react";
 import { createClient } from "@/lib/supabase/client";
+import { Role, ROLE_LABEL } from "@/lib/auth/roles";
 
 type Profile = {
   id: string;
   display_name: string | null;
-  role: "user" | "moderator" | "admin" | "doctor";
+  role: Role;
 };
 
 function roleLabel(role: Profile["role"]) {
-  if (role === "doctor") return "Doctor";
-  if (role === "moderator") return "Moderator";
-  if (role === "admin") return "Admin";
-  return "User";
+  return ROLE_LABEL[role];
 }
 
 export default function ProfileSettingsPage() {
@@ -105,8 +103,8 @@ export default function ProfileSettingsPage() {
           <span className="eyebrow">Member profile</span>
           <h1 className="text-4xl font-semibold">Profile settings</h1>
           <p className="max-w-2xl text-sm leading-6 muted">
-            Keep your display name and visible identity tidy so your forum posts, recipes, and future blog
-            contributions feel cohesive across the site.
+            Keep your display name and visible identity tidy so community participation and future portal
+            interactions feel consistent across CareBridge.
           </p>
         </div>
 
@@ -129,10 +127,10 @@ export default function ProfileSettingsPage() {
                 className="field"
                 value={displayName}
                 onChange={(e) => setDisplayName(e.target.value)}
-                placeholder="e.g. CalmGutGuide"
+                placeholder="e.g. Alex M."
               />
               <div className="mt-2 text-xs leading-5 muted">
-                This is what other members will see on your posts, comments, recipes, and future blogs.
+                This is what other people may see in community areas and future shared platform experiences.
               </div>
             </div>
 

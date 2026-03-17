@@ -61,6 +61,11 @@ export default function LoginForm() {
         {loading ? "Signing in..." : "Sign in"}
       </button>
 
+      <p className="text-sm leading-6 muted">
+        Your CareBridge account gives you access to the right protected workspace for portal, provider,
+        or admin workflows.
+      </p>
+
       <p className="text-sm muted">
         Don&apos;t have an account?{" "}
         <Link href="/signup" className="font-semibold text-[var(--accent-strong)]">

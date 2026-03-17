@@ -214,7 +214,7 @@ export default function ForumPostPage({
 
             <div className="mt-2 flex items-center gap-2 text-xs opacity-70">
               <span>{post.profiles?.display_name ?? "Unknown"}</span>
-              <RoleBadge role={post.profiles?.role ?? "user"} />
+              <RoleBadge role={post.profiles?.role ?? "patient"} />
             </div>
 
             <div className="mt-2 text-xs opacity-60">
@@ -236,7 +236,7 @@ export default function ForumPostPage({
                     <div className="flex items-center justify-between gap-3">
                       <div className="flex items-center gap-2 text-xs opacity-70">
                         <span>{comment.profiles?.display_name ?? "Unknown"}</span>
-                        <RoleBadge role={comment.profiles?.role ?? "user"} />
+                        <RoleBadge role={comment.profiles?.role ?? "patient"} />
                       </div>
                       <div className="text-xs opacity-60">
                         {new Date(comment.created_at).toLocaleString()}

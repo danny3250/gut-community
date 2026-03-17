@@ -224,11 +224,11 @@ export default function RecipesPage() {
       <section className="panel flex flex-col gap-6 px-6 py-8 sm:px-8 lg:flex-row lg:items-end lg:justify-between">
         <div className="max-w-3xl">
           <span className="eyebrow">Recipe library</span>
-          <h1 className="mt-4 text-4xl font-semibold">Practical recipes for calmer meals.</h1>
+          <h1 className="mt-4 text-4xl font-semibold">Recipes for the days when eating feels harder than it should.</h1>
           <p className="mt-3 text-sm leading-6 muted sm:text-base">
-            Browse public recipes that are easy to read, gently tagged, and ready to support the
-            larger Well Emboweled experience. Members can keep drafts, save favorites, and prepare
-            for future shopping list and recommendation tools.
+            Browse public recipes built to be practical, readable, and easy to come back to when your
+            stomach feels unpredictable. Members can save favorites, keep drafts, and grow into more
+            supportive planning tools over time.
           </p>
         </div>
 
@@ -247,6 +247,54 @@ export default function RecipesPage() {
               Join members
             </Link>
           )}
+        </div>
+      </section>
+
+      <section className="grid gap-4 lg:grid-cols-[1.05fr_0.95fr]">
+        <div className="panel px-5 py-5 sm:px-6">
+          <div className="text-sm font-semibold">What you can do here</div>
+          <div className="mt-4 grid gap-3 sm:grid-cols-2">
+            <InfoCard
+              title="Browse publicly"
+              body="Most recipes stay open to everyone so helpful meal ideas are easy to reach without a login."
+            />
+            <InfoCard
+              title="Filter simply"
+              body="Use tags like gluten-free, low-spice, or gentle-digestion to narrow things down quickly."
+            />
+            <InfoCard
+              title="Save what helps"
+              body="Members can keep favorite recipes close instead of searching for the same meals again."
+            />
+            <InfoCard
+              title="Build from there"
+              body="The recipe system is set up to support future shopping lists, collections, and recommendations."
+            />
+          </div>
+        </div>
+
+        <div className="panel px-5 py-5 sm:px-6">
+          <div className="text-sm font-semibold">Recipe philosophy</div>
+          <div className="mt-4 space-y-3 text-sm leading-6 muted">
+            <p>
+              CareBridge recipes are meant to feel useful in real life. That means clearer ingredient
+              lists, supportive tags, and less pressure to cook perfectly.
+            </p>
+            <p>
+              They are here to help with meal ideas and planning, not to diagnose conditions or promise that
+              one way of eating works for everyone.
+            </p>
+          </div>
+          <div className="mt-5 flex flex-wrap gap-3">
+            <Link href="/resources" className="btn-secondary px-4 py-2 text-sm">
+              Browse resources
+            </Link>
+            {!userId ? (
+              <Link href="/signup" className="btn-secondary px-4 py-2 text-sm">
+                Join members
+              </Link>
+            ) : null}
+          </div>
         </div>
       </section>
 
@@ -421,5 +469,14 @@ export default function RecipesPage() {
         <FavoritesDrawer open={favOpen} onClose={() => setFavOpen(false)} />
       ) : null}
     </main>
+  );
+}
+
+function InfoCard({ title, body }: { title: string; body: string }) {
+  return (
+    <div className="rounded-[24px] border border-[var(--border)] bg-white/72 px-4 py-4">
+      <div className="text-lg font-semibold">{title}</div>
+      <p className="mt-2 text-sm leading-6 muted">{body}</p>
+    </div>
   );
 }

@@ -1,30 +1,28 @@
 import { redirect } from "next/navigation";
-import { createClient } from "@/lib/supabase/server";
+import { getCurrentUserWithRole, getHomePathForRole } from "@/lib/auth/session";
 import SignupForm from "@/app/components/SignupForm";
+import { BRAND } from "@/lib/config/brand";
 
 export default async function SignupPage() {
-  const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  const { user, role } = await getCurrentUserWithRole();
 
   if (user) {
-    redirect("/app");
+    redirect(getHomePathForRole(role));
   }
 
   return (
     <main className="shell py-8 sm:py-12">
       <div className="mx-auto grid max-w-5xl gap-6 lg:grid-cols-[0.95fr_1.05fr]">
         <section className="panel px-6 py-8 sm:px-8">
-          <span className="eyebrow">New membership</span>
-          <h1 className="mt-4 text-4xl font-semibold">Create your Well Emboweled account</h1>
+          <span className="eyebrow">Create account</span>
+          <h1 className="mt-4 text-4xl font-semibold">Create your {BRAND.name} account</h1>
           <p className="mt-4 text-sm leading-6 muted">
-            Start with the member basics now and leave room for future subscriptions, saved content,
-            and premium wellness features.
+            Create an account to access the patient portal, save helpful resources, prepare for appointments,
+            and stay connected to care over time.
           </p>
           <div className="mt-8 space-y-3 text-sm leading-6 muted">
-            <p>Join the recipe library, private forum, and profile-based community experience.</p>
-            <p>Once you sign up, you&apos;ll verify your email before continuing into the app.</p>
+            <p>Public resources stay open, while protected patient, provider, and admin workflows stay role-gated.</p>
+            <p>After you sign up, you&apos;ll verify your email and then continue into the right CareBridge workspace.</p>
           </div>
         </section>
 

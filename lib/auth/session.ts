@@ -1,5 +1,7 @@
+import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { Role } from "@/lib/auth/roles";
+import { getRoleHomePath } from "@/lib/config/brand";
 
 type ProfileRoleRow = {
   role: Role;
@@ -28,4 +30,16 @@ export async function getCurrentUserWithRole() {
     role: profile?.role ?? null,
     displayName: profile?.display_name ?? null,
   };
+}
+
+export async function getAuthenticatedUserOrRedirect() {
+  const session = await getCurrentUserWithRole();
+  if (!session.user) {
+    redirect("/login");
+  }
+  return session;
+}
+
+export function getHomePathForRole(role: Role | null | undefined) {
+  return getRoleHomePath(role);
 }

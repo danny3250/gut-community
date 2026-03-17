@@ -72,11 +72,19 @@ export default function ForumPage() {
       <main className="shell py-6 sm:py-10">
         <section className="panel max-w-3xl px-6 py-8 sm:px-8">
           <span className="eyebrow">Member forum</span>
-          <h1 className="mt-4 text-3xl font-semibold">Sign in to view the forum</h1>
+          <h1 className="mt-4 text-3xl font-semibold">Sign in to join the conversation</h1>
           <p className="mt-4 text-sm leading-6 muted">
-            This area is already protected behind login, which gives you a strong foundation for a more
-            private and subscription-friendly community experience later on.
+            The forum is a more private member space for shared experience, practical conversation, and
+            support from people navigating similar frustrations. It is not a source of medical advice.
           </p>
+          <div className="mt-6 flex flex-wrap gap-3">
+            <Link href="/login" className="btn-primary">
+              Sign in
+            </Link>
+            <Link href="/signup" className="btn-secondary">
+              Join members
+            </Link>
+          </div>
         </section>
       </main>
     );
@@ -89,8 +97,8 @@ export default function ForumPage() {
           <span className="eyebrow">Community support</span>
           <h1 className="mt-4 text-4xl font-semibold">Member forum</h1>
           <p className="mt-3 text-sm leading-6 muted">
-            Conversations, support, and practical tips from people trying to feel better and eat with more
-            confidence.
+            Conversations, support, and practical day-to-day perspective from people trying to make meals,
+            routines, and symptom days feel more manageable.
           </p>
         </div>
         <Link className="btn-primary" href="/forum/new">
@@ -109,7 +117,7 @@ export default function ForumPage() {
           {posts.map((p) => {
             const author = p.profiles;
             const name = author?.display_name ?? "Unknown";
-            const role = author?.role ?? "user";
+            const role = author?.role ?? "patient";
 
             return (
               <Link

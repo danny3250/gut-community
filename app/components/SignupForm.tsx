@@ -67,6 +67,10 @@ export default function SignupForm() {
         {loading ? "Creating..." : "Create account"}
       </button>
 
+      <p className="text-sm leading-6 muted">
+        Start with public resources and step into protected portal workflows as CareBridge expands.
+      </p>
+
       <p className="text-sm muted">
         Already a member?{" "}
         <Link href="/login" className="font-semibold text-[var(--accent-strong)]">
