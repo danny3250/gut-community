@@ -1,6 +1,11 @@
 import Link from "next/link";
 
-export default function VerifyPage() {
+export default async function VerifyPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ next?: string }>;
+}) {
+  const resolvedSearchParams = await searchParams;
   return (
     <main className="shell py-8 sm:py-12">
       <section className="panel mx-auto max-w-3xl px-6 py-8 text-center sm:px-8">
@@ -15,7 +20,7 @@ export default function VerifyPage() {
           community, and future telehealth-ready workflows.
         </div>
         <div className="mt-6">
-          <Link href="/login" className="btn-primary">
+          <Link href={`/login?next=${encodeURIComponent(resolvedSearchParams.next || "/portal")}`} className="btn-primary">
             Continue to sign in
           </Link>
         </div>

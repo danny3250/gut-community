@@ -3,11 +3,16 @@ import { getCurrentUserWithRole, getHomePathForRole } from "@/lib/auth/session";
 import SignupForm from "@/app/components/SignupForm";
 import { BRAND } from "@/lib/config/brand";
 
-export default async function SignupPage() {
+export default async function SignupPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ next?: string }>;
+}) {
   const { user, role } = await getCurrentUserWithRole();
+  const resolvedSearchParams = await searchParams;
 
   if (user) {
-    redirect(getHomePathForRole(role));
+    redirect(resolvedSearchParams.next || getHomePathForRole(role));
   }
 
   return (
@@ -27,7 +32,7 @@ export default async function SignupPage() {
         </section>
 
         <section className="panel-strong px-6 py-8 sm:px-8">
-          <SignupForm />
+          <SignupForm nextHref={resolvedSearchParams.next || "/portal"} />
         </section>
       </div>
     </main>

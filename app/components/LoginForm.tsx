@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { createSupabaseClient } from "@/lib/supabaseClient";
 
-export default function LoginForm() {
+export default function LoginForm({ nextHref = "/portal" }: { nextHref?: string }) {
   const router = useRouter();
   const supabase = createSupabaseClient();
 
@@ -27,7 +27,7 @@ export default function LoginForm() {
       return;
     }
 
-    router.push("/app");
+    router.push(nextHref);
     router.refresh();
   }
 
@@ -68,7 +68,7 @@ export default function LoginForm() {
 
       <p className="text-sm muted">
         Don&apos;t have an account?{" "}
-        <Link href="/signup" className="font-semibold text-[var(--accent-strong)]">
+        <Link href={`/signup?next=${encodeURIComponent(nextHref)}`} className="font-semibold text-[var(--accent-strong)]">
           Create one here
         </Link>
       </p>

@@ -4,7 +4,7 @@ import { getRoleHomePath } from "@/lib/config/brand";
 import { Role } from "@/lib/auth/roles";
 
 const AUTH_PAGES = ["/login", "/signup"];
-const PROTECTED_PREFIXES = ["/portal", "/provider", "/admin", "/settings"];
+const PROTECTED_PREFIXES = ["/portal", "/provider", "/admin", "/settings", "/visit"];
 const LEGACY_REDIRECTS: Record<string, string> = {
   "/app": "/portal",
 };

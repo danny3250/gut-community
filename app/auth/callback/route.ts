@@ -4,8 +4,9 @@ import { createServerClient } from "@supabase/ssr";
 export async function GET(request: NextRequest) {
   const url = new URL(request.url);
   const code = url.searchParams.get("code");
+  const next = url.searchParams.get("next") || "/portal";
 
-  const response = NextResponse.redirect(new URL("/app", request.url));
+  const response = NextResponse.redirect(new URL(next, request.url));
 
   if (!code) {
     return response;
