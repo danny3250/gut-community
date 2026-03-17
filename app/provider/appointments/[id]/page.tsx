@@ -3,7 +3,20 @@ import { notFound, redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import AppointmentStatusBadge from "@/app/components/AppointmentStatusBadge";
 import AppointmentActionButton from "@/app/components/appointments/AppointmentActionButton";
-import { fetchProviderAppointmentById, formatAppointmentDateTime, getAppointmentTimingState } from "@/lib/carebridge/appointments";
+import AppointmentMessageButton from "@/app/components/messages/AppointmentMessageButton";
+import {
+  fetchProviderAppointmentById,
+  formatAppointmentDateTime,
+  getAppointmentTimingState,
+} from "@/lib/carebridge/appointments";
+import {
+  fetchAppointmentDocumentsForProvider,
+  fetchAppointmentFormsForProvider,
+  formatDocumentCategory,
+  formatFormTypeLabel,
+  getIntakeTemplate,
+} from "@/lib/carebridge/forms";
+import { getConversationIdForAppointment } from "@/lib/carebridge/messages";
 import { fetchProviderByUserId } from "@/lib/carebridge/providers";
 import LaunchVisitButton from "./LaunchVisitButton";
 
@@ -25,9 +38,15 @@ export default async function ProviderAppointmentDetailPage({
   const provider = await fetchProviderByUserId(supabase, user.id);
   if (!provider) redirect("/portal");
 
-  const appointment = await fetchProviderAppointmentById(supabase, provider.id, id);
+  const [appointment, forms, documents] = await Promise.all([
+    fetchProviderAppointmentById(supabase, provider.id, id),
+    fetchAppointmentFormsForProvider(supabase, id),
+    fetchAppointmentDocumentsForProvider(supabase, id),
+  ]);
+
   if (!appointment) notFound();
 
+  const conversationId = await getConversationIdForAppointment(supabase, appointment.id);
   const patient = Array.isArray(appointment.patients) ? appointment.patients[0] ?? null : appointment.patients ?? null;
   const organization = patient?.organizations;
   const organizationName = Array.isArray(organization) ? organization[0]?.name : organization?.name;
@@ -45,7 +64,7 @@ export default async function ProviderAppointmentDetailPage({
             <span className="eyebrow">Appointment detail</span>
             <h1 className="mt-3 text-3xl font-semibold">{patient?.legal_name || patient?.email || "Patient"}</h1>
             <p className="mt-2 max-w-2xl text-sm leading-6 muted">
-              Review the appointment context, update the visit status, and launch telehealth when the join window opens.
+              Review the appointment context, intake details, linked files, and visit status before the session begins.
             </p>
           </div>
           <AppointmentStatusBadge status={appointment.status} />
@@ -61,12 +80,11 @@ export default async function ProviderAppointmentDetailPage({
         </div>
 
         <div className="mt-5 flex flex-wrap gap-3">
+          <AppointmentMessageButton appointmentId={appointment.id} hrefBase="/provider/messages" existingConversationId={conversationId} />
           {timing.canJoin ? (
             <LaunchVisitButton appointmentId={appointment.id} />
           ) : (
-            <div className="rounded-2xl border border-[var(--border)] bg-white/70 p-3 text-sm muted">
-              {timing.label}
-            </div>
+            <div className="rounded-2xl border border-[var(--border)] bg-white/70 p-3 text-sm muted">{timing.label}</div>
           )}
           {canManage ? (
             <>
@@ -85,16 +103,74 @@ export default async function ProviderAppointmentDetailPage({
 
       <section className="grid gap-4 lg:grid-cols-2">
         <section className="panel px-6 py-6 sm:px-8">
-          <h2 className="text-2xl font-semibold">Visit workflow notes</h2>
-          <p className="mt-3 max-w-2xl text-sm leading-6 muted">
-            Launching the visit creates the session if needed, moves the visit lifecycle forward, and routes both participants into the shared visit experience.
-          </p>
+          <h2 className="text-2xl font-semibold">Submitted forms</h2>
+          <div className="mt-4 grid gap-3">
+            {forms.length === 0 ? (
+              <div className="rounded-[22px] border border-[var(--border)] bg-white/72 px-4 py-4 text-sm muted">
+                No intake forms submitted yet.
+              </div>
+            ) : (
+              forms.map((form) => {
+                const template = getIntakeTemplate(form.form_type);
+                return (
+                  <div key={form.id} className="rounded-[22px] border border-[var(--border)] bg-white/72 px-4 py-4">
+                    <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+                      <div>
+                        <div className="text-sm font-semibold">{template?.title ?? formatFormTypeLabel(form.form_type)}</div>
+                        <div className="mt-1 text-sm muted">
+                          Submitted{" "}
+                          {new Intl.DateTimeFormat("en-US", {
+                            dateStyle: "medium",
+                            timeStyle: "short",
+                          }).format(new Date(form.submitted_at ?? form.updated_at))}
+                        </div>
+                      </div>
+                      <span className="rounded-full border border-[var(--border)] px-3 py-1 text-xs capitalize">
+                        {form.status}
+                      </span>
+                    </div>
+                    <div className="mt-4 grid gap-3">
+                      {Object.entries(form.structured_responses ?? {}).map(([key, value]) => (
+                        <div key={key} className="rounded-[18px] border border-[var(--border)] bg-white/80 px-3 py-3">
+                          <div className="text-xs font-semibold uppercase tracking-[0.18em] text-[var(--accent-strong)]">
+                            {template?.fields.find((field) => field.id === key)?.label ?? formatFormTypeLabel(key)}
+                          </div>
+                          <div className="mt-2 text-sm leading-6 muted">
+                            {Array.isArray(value) ? value.join(", ") : String(value ?? "")}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                );
+              })
+            )}
+          </div>
         </section>
         <section className="panel px-6 py-6 sm:px-8">
-          <h2 className="text-2xl font-semibold">Clinical notes placeholder</h2>
-          <p className="mt-3 max-w-2xl text-sm leading-6 muted">
-            Secure visit notes, intake review, and post-visit follow-up can be layered into this detail view as provider workflows expand.
-          </p>
+          <h2 className="text-2xl font-semibold">Appointment documents</h2>
+          <div className="mt-4 grid gap-3">
+            {documents.length === 0 ? (
+              <div className="rounded-[22px] border border-[var(--border)] bg-white/72 px-4 py-4 text-sm muted">
+                No documents linked to this appointment.
+              </div>
+            ) : (
+              documents.map((document) => (
+                <div key={document.id} className="rounded-[22px] border border-[var(--border)] bg-white/72 px-4 py-4">
+                  <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+                    <div>
+                      <div className="text-sm font-semibold">{document.title ?? document.file_path.split("/").pop()}</div>
+                      <div className="mt-1 text-sm muted">{formatDocumentCategory(document.category)}</div>
+                      {document.description ? <div className="mt-2 text-sm muted">{document.description}</div> : null}
+                    </div>
+                    <Link href={`/api/documents/${document.id}/download`} className="btn-secondary px-4 py-2 text-sm">
+                      View document
+                    </Link>
+                  </div>
+                </div>
+              ))
+            )}
+          </div>
         </section>
       </section>
     </div>
