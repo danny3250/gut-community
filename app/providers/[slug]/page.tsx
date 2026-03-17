@@ -13,9 +13,7 @@ type ProviderProfilePageProps = {
 export default async function ProviderProfilePage({ params }: ProviderProfilePageProps) {
   const { slug } = await params;
   const supabase = await createClient();
-  console.log("[providers/[slug]] resolving provider slug:", slug);
   const provider = await fetchProviderBySlug(supabase, slug);
-  console.log("[providers/[slug]] provider lookup result:", provider ? { id: provider.id, slug: provider.slug, name: provider.display_name } : null);
 
   if (!provider) {
     notFound();

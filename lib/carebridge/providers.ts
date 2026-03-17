@@ -31,35 +31,8 @@ export async function fetchPublicProviders(supabase: SupabaseClient) {
 
 export async function fetchProviderBySlug(supabase: SupabaseClient, slug: string) {
   const normalizedSlug = slugifyProviderName(slug);
-
-  const { data, error } = await supabase
-    .from("providers")
-    .select("id,organization_id,slug,display_name,credentials,specialty,bio,states_served,telehealth_enabled,areas_of_care,visit_types,organizations(name,slug)")
-    .eq("slug", slug)
-    .maybeSingle();
-
-  if (error) throw error;
-  if (data) {
-    return normalizeProviderRow(data as ProviderRow);
-  }
-
-  const { data: fallbackRows, error: fallbackError } = await supabase
-    .from("providers")
-    .select("id,organization_id,slug,display_name,credentials,specialty,bio,states_served,telehealth_enabled,areas_of_care,visit_types,organizations(name,slug)")
-    .order("display_name", { ascending: true });
-
-  if (fallbackError) throw fallbackError;
-
-  const matched = ((fallbackRows ?? []) as ProviderRow[]).find((row) => {
-    const rowSlug = row.slug ?? slugifyProviderName(row.display_name);
-    return rowSlug === slug || rowSlug === normalizedSlug;
-  });
-
-  if (!matched) {
-    return null;
-  }
-
-  return normalizeProviderRow(matched);
+  const providers = await fetchPublicProviders(supabase);
+  return providers.find((provider) => provider.slug === normalizedSlug) ?? null;
 }
 
 export async function fetchProviderByUserId(supabase: SupabaseClient, userId: string) {
@@ -97,11 +70,12 @@ export async function fetchProviderAvailability(supabase: SupabaseClient, provid
 
 function normalizeProviderRow(row: ProviderRow): ProviderDirectoryRecord {
   const organization = Array.isArray(row.organizations) ? row.organizations[0] ?? null : row.organizations ?? null;
+  const normalizedSlug = slugifyProviderName(row.slug ?? row.display_name);
 
   return {
     id: row.id,
     organization_id: row.organization_id ?? null,
-    slug: row.slug ?? slugifyProviderName(row.display_name),
+    slug: normalizedSlug,
     display_name: row.display_name,
     credentials: row.credentials,
     specialty: row.specialty,
@@ -114,6 +88,6 @@ function normalizeProviderRow(row: ProviderRow): ProviderDirectoryRecord {
   };
 }
 
-function slugifyProviderName(value: string) {
+export function slugifyProviderName(value: string) {
   return value.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "");
 }
