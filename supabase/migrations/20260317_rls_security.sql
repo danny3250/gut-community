@@ -173,6 +173,14 @@ begin
   end if;
 
   if tg_op = 'INSERT' then
+    if auth.uid() is null then
+      if coalesce(new.role::text, 'patient') <> 'patient' then
+        raise exception 'Only admins can assign non-patient roles.';
+      end if;
+
+      return new;
+    end if;
+
     if new.id is distinct from auth.uid() and coalesce(new.user_id, new.id) is distinct from auth.uid() then
       raise exception 'Profiles can only be created for the authenticated user.';
     end if;
