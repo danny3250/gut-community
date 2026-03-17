@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { createNotification } from "@/lib/carebridge/notifications";
 import { fetchProviderByUserId, slugifyProviderName } from "@/lib/carebridge/providers";
 
 type OnboardingPayload = {
@@ -104,6 +105,18 @@ export async function POST(request: NextRequest) {
       verification_status: verificationStatus,
       states_served: statesServed,
       telehealth_enabled: payload.telehealthEnabled ?? true,
+    },
+  });
+
+  await createNotification(admin, {
+    userId: user.id,
+    type: "provider_application_received",
+    title: "Provider application received",
+    body: "Your provider profile has been submitted for review. Public listing and bookings will activate after verification.",
+    linkUrl: "/provider",
+    metadata: {
+      provider_id: providerRow.id,
+      verification_status: verificationStatus,
     },
   });
 

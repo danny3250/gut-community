@@ -1,5 +1,6 @@
 import CareWorkspaceShell from "@/app/components/CareWorkspaceShell";
 import { getAuthenticatedUserOrRedirect } from "@/lib/auth/session";
+import { getUnreadNotificationCount } from "@/lib/carebridge/notifications";
 
 const portalLinks = [
   { href: "/portal", label: "Dashboard" },
@@ -8,12 +9,13 @@ const portalLinks = [
   { href: "/portal/recipes", label: "Recipes" },
   { href: "/portal/appointments", label: "Appointments" },
   { href: "/portal/messages", label: "Messages" },
+  { href: "/portal/notifications", label: "Notifications" },
   { href: "/portal/documents", label: "Documents" },
   { href: "/portal/forms", label: "Forms" },
   { href: "/portal/resources", label: "Resources" },
   { href: "/portal/community", label: "Community" },
   { href: "/portal/profile", label: "Profile" },
-];
+] as const;
 
 const secondaryLinks = [
   { href: "/providers", label: "Provider directory" },
@@ -22,7 +24,11 @@ const secondaryLinks = [
 ];
 
 export default async function PatientPortalLayout({ children }: { children: React.ReactNode }) {
-  const { user } = await getAuthenticatedUserOrRedirect();
+  const { user, supabase } = await getAuthenticatedUserOrRedirect();
+  const unreadNotifications = await getUnreadNotificationCount(supabase, user.id);
+  const resolvedPrimaryLinks = portalLinks.map((link) =>
+    link.href === "/portal/notifications" ? { ...link, badgeCount: unreadNotifications } : link
+  );
 
   return (
     <CareWorkspaceShell
@@ -30,7 +36,7 @@ export default async function PatientPortalLayout({ children }: { children: Reac
       title="CareBridge patient access"
       description="Appointments, messages, forms, resources, and telehealth-ready care workflows in one place."
       email={user?.email ?? null}
-      primaryLinks={portalLinks}
+      primaryLinks={resolvedPrimaryLinks}
       secondaryLinks={secondaryLinks}
     >
       {children}

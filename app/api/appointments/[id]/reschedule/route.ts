@@ -1,5 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
+import { createAdminClient } from "@/lib/supabase/admin";
 import { createClient } from "@/lib/supabase/server";
+import { createNotifications, type NotificationInput } from "@/lib/carebridge/notifications";
 import { fetchProviderById, fetchProviderByUserId } from "@/lib/carebridge/providers";
 import { fetchPatientByUserId } from "@/lib/carebridge/patients";
 import {
@@ -71,6 +73,31 @@ export async function POST(request: NextRequest, { params }: RouteContext) {
       timezone: payload.timezone,
       status: "confirmed",
     });
+    const patientUserId = Array.isArray(appointment.patients) ? appointment.patients[0]?.user_id : appointment.patients?.user_id;
+    const notifications: NotificationInput[] = [
+      ...(provider.user_id
+        ? [{
+            userId: provider.user_id,
+            type: "appointment_rescheduled" as const,
+            title: "Appointment rescheduled",
+            body: "The appointment time has been updated.",
+            linkUrl: `/provider/appointments/${id}`,
+            metadata: { appointment_id: id },
+          }]
+        : []),
+      ...(patientUserId
+        ? [{
+            userId: patientUserId,
+            type: "appointment_rescheduled" as const,
+            title: "Appointment rescheduled",
+            body: "Your provider updated the appointment time.",
+            linkUrl: `/portal/appointments/${id}`,
+            metadata: { appointment_id: id },
+          }]
+        : []),
+    ];
+    const admin = createAdminClient();
+    await createNotifications(admin, notifications);
     return NextResponse.json({ ok: true });
   }
 
@@ -108,5 +135,27 @@ export async function POST(request: NextRequest, { params }: RouteContext) {
     timezone: payload.timezone,
     status: "requested",
   });
+  const notifications: NotificationInput[] = [
+    {
+      userId: user.id,
+      type: "appointment_rescheduled",
+      title: "Reschedule request sent",
+      body: "Your new requested time has been saved and shared with the provider.",
+      linkUrl: `/portal/appointments/${id}`,
+      metadata: { appointment_id: id },
+    },
+    ...(provider.user_id
+      ? [{
+          userId: provider.user_id,
+          type: "appointment_rescheduled" as const,
+          title: "Patient requested a new time",
+          body: "A patient requested to reschedule an appointment.",
+          linkUrl: `/provider/appointments/${id}`,
+          metadata: { appointment_id: id, patient_id: patient.id },
+        }]
+      : []),
+  ];
+  const admin = createAdminClient();
+  await createNotifications(admin, notifications);
   return NextResponse.json({ ok: true });
 }

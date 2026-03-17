@@ -8,6 +8,7 @@ import { BRAND } from "@/lib/config/brand";
 type WorkspaceLink = {
   href: string;
   label: string;
+  badgeCount?: number;
 };
 
 type CareWorkspaceShellProps = {
@@ -58,7 +59,20 @@ export default function CareWorkspaceShell({
                         : "block rounded-2xl px-4 py-3 text-sm hover:bg-white/70"
                     }
                   >
-                    {link.label}
+                    <span className="flex items-center justify-between gap-3">
+                      <span>{link.label}</span>
+                      {link.badgeCount && link.badgeCount > 0 ? (
+                        <span
+                          className={
+                            active
+                              ? "rounded-full bg-white/18 px-2 py-0.5 text-xs font-semibold text-white"
+                              : "rounded-full bg-[var(--accent-soft)] px-2 py-0.5 text-xs font-semibold text-[var(--accent-strong)]"
+                          }
+                        >
+                          {link.badgeCount > 99 ? "99+" : link.badgeCount}
+                        </span>
+                      ) : null}
+                    </span>
                   </Link>
                 );
               })}

@@ -1,5 +1,7 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { Role } from "@/lib/auth/roles";
+import { createNotification } from "@/lib/carebridge/notifications";
+import { createAdminClient } from "@/lib/supabase/admin";
 
 type ConversationRow = {
   id: string;
@@ -327,6 +329,22 @@ export async function sendMessageInConversation(
     entity_type: "message_conversation",
     entity_id: conversationId,
     metadata_json: {},
+  });
+
+  const admin = createAdminClient();
+  await createNotification(admin, {
+    userId: recipientUserId,
+    type: "message_received",
+    title: conversation.provider_user_id === recipientUserId ? "New patient message" : "New provider message",
+    body: body.trim().length > 120 ? `${body.trim().slice(0, 117)}...` : body.trim(),
+    linkUrl:
+      conversation.provider_user_id === recipientUserId
+        ? `/provider/messages/${conversationId}`
+        : `/portal/messages/${conversationId}`,
+    metadata: {
+      conversation_id: conversationId,
+      sender_user_id: senderUserId,
+    },
   });
 }
 

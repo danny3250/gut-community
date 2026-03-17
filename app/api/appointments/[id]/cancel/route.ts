@@ -1,7 +1,9 @@
 import { NextRequest, NextResponse } from "next/server";
+import { createAdminClient } from "@/lib/supabase/admin";
 import { createClient } from "@/lib/supabase/server";
 import { fetchProviderByUserId } from "@/lib/carebridge/providers";
 import { fetchPatientByUserId } from "@/lib/carebridge/patients";
+import { createNotifications, type NotificationInput } from "@/lib/carebridge/notifications";
 import { fetchPatientAppointmentById, fetchProviderAppointmentById, updateAppointmentForPatient, updateAppointmentForProvider } from "@/lib/carebridge/appointments";
 import { Role } from "@/lib/auth/roles";
 
@@ -42,6 +44,31 @@ export async function POST(_request: NextRequest, { params }: RouteContext) {
     }
 
     await updateAppointmentForProvider(supabase, provider.id, id, { status: "cancelled" });
+    const patientUserId = Array.isArray(appointment.patients) ? appointment.patients[0]?.user_id : appointment.patients?.user_id;
+    const notifications: NotificationInput[] = [
+      ...(patientUserId
+        ? [{
+            userId: patientUserId,
+            type: "appointment_cancelled" as const,
+            title: "Appointment cancelled",
+            body: "Your provider cancelled the appointment.",
+            linkUrl: `/portal/appointments/${id}`,
+            metadata: { appointment_id: id },
+          }]
+        : []),
+      ...(provider.user_id
+        ? [{
+            userId: provider.user_id,
+            type: "appointment_cancelled" as const,
+            title: "Appointment cancelled",
+            body: "The appointment has been cancelled.",
+            linkUrl: `/provider/appointments/${id}`,
+            metadata: { appointment_id: id },
+          }]
+        : []),
+    ];
+    const admin = createAdminClient();
+    await createNotifications(admin, notifications);
     return NextResponse.json({ ok: true });
   }
 
@@ -60,5 +87,28 @@ export async function POST(_request: NextRequest, { params }: RouteContext) {
   }
 
   await updateAppointmentForPatient(supabase, patient.id, id, { status: "cancelled" });
+  const providerUserId = Array.isArray(appointment.providers) ? appointment.providers[0]?.user_id : appointment.providers?.user_id;
+  const notifications: NotificationInput[] = [
+    {
+      userId: user.id,
+      type: "appointment_cancelled",
+      title: "Appointment cancelled",
+      body: "Your appointment has been cancelled.",
+      linkUrl: `/portal/appointments/${id}`,
+      metadata: { appointment_id: id },
+    },
+    ...(providerUserId
+      ? [{
+          userId: providerUserId,
+          type: "appointment_cancelled" as const,
+          title: "Appointment cancelled",
+          body: "A patient cancelled an appointment.",
+          linkUrl: `/provider/appointments/${id}`,
+          metadata: { appointment_id: id, patient_id: patient.id },
+        }]
+      : []),
+  ];
+  const admin = createAdminClient();
+  await createNotifications(admin, notifications);
   return NextResponse.json({ ok: true });
 }

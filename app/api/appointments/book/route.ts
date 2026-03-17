@@ -1,6 +1,9 @@
 import { NextRequest, NextResponse } from "next/server";
+import { createAdminClient } from "@/lib/supabase/admin";
 import { createClient } from "@/lib/supabase/server";
 import { createAppointment } from "@/lib/carebridge/appointments";
+import { getRequiredFormTypesForAppointment } from "@/lib/carebridge/forms";
+import { buildAppointmentReminderSchedule, createNotifications, type NotificationInput } from "@/lib/carebridge/notifications";
 import { getOrCreatePatientRecord } from "@/lib/carebridge/patients";
 import { getAvailableSlots } from "@/lib/carebridge/scheduling";
 import { canProviderAcceptBookings, fetchProviderById, isProviderVerified } from "@/lib/carebridge/providers";
@@ -128,6 +131,88 @@ export async function POST(request: NextRequest) {
       telehealth_vendor_todo: "Amazon Chime SDK integration still needs real session provisioning.",
     },
   });
+
+  const formattedStart = new Intl.DateTimeFormat("en-US", {
+    dateStyle: "full",
+    timeStyle: "short",
+    timeZone: payload.timezone,
+  }).format(new Date(payload.startIso));
+  const requiredFormTypes = getRequiredFormTypesForAppointment(payload.appointmentType);
+  const reminderNotifications = buildAppointmentReminderSchedule(payload.startIso);
+
+  const admin = createAdminClient();
+  const notifications: NotificationInput[] = [
+    {
+      userId: user.id,
+      type: "appointment_booked",
+      title: "Appointment booked",
+      body: `Your appointment with ${provider.display_name} is confirmed for ${formattedStart}.`,
+      linkUrl: `/portal/appointments/${appointment.id}/confirmed`,
+      metadata: {
+        appointment_id: appointment.id,
+        provider_id: provider.id,
+      },
+    },
+    ...(provider.user_id
+      ? [{
+          userId: provider.user_id,
+          type: "appointment_booked" as const,
+          title: "New appointment booked",
+          body: `A patient booked a ${payload.appointmentType.replace(/_/g, " ")} visit for ${formattedStart}.`,
+          linkUrl: `/provider/appointments/${appointment.id}`,
+          metadata: {
+            appointment_id: appointment.id,
+            patient_id: patientId,
+          },
+        }]
+      : []),
+    {
+      userId: user.id,
+      type: "forms_required",
+      title: "Pre-visit forms are ready",
+      body: `Please complete ${requiredFormTypes.length} pre-visit form${requiredFormTypes.length === 1 ? "" : "s"} before your appointment.`,
+      linkUrl: `/portal/appointments/${appointment.id}`,
+      metadata: {
+        appointment_id: appointment.id,
+        required_form_types: requiredFormTypes,
+      },
+    },
+    ...reminderNotifications.map((reminder) => ({
+      userId: user.id,
+      type: reminder.type,
+      title: reminder.type === "telehealth_ready" ? "Your telehealth visit starts soon" : "Appointment reminder",
+      body:
+        reminder.type === "telehealth_ready"
+          ? `Your telehealth visit with ${provider.display_name} begins in about ${reminder.label}.`
+          : `Your appointment with ${provider.display_name} begins in about ${reminder.label}.`,
+      linkUrl: `/portal/appointments/${appointment.id}`,
+      scheduledFor: reminder.scheduledFor,
+      metadata: {
+        appointment_id: appointment.id,
+        provider_id: provider.id,
+      },
+    }) satisfies NotificationInput),
+    ...reminderNotifications.flatMap((reminder) =>
+      provider.user_id
+        ? [{
+            userId: provider.user_id,
+            type: reminder.type === "telehealth_ready" ? "telehealth_ready" : "appointment_reminder",
+            title: reminder.type === "telehealth_ready" ? "Telehealth visit starts soon" : "Upcoming appointment reminder",
+            body:
+              reminder.type === "telehealth_ready"
+                ? `Your telehealth visit begins in about ${reminder.label}.`
+                : `Your appointment begins in about ${reminder.label}.`,
+            linkUrl: `/provider/appointments/${appointment.id}`,
+            scheduledFor: reminder.scheduledFor,
+            metadata: {
+              appointment_id: appointment.id,
+              patient_id: patientId,
+            },
+          } satisfies NotificationInput]
+        : []
+    ),
+  ];
+  await createNotifications(admin, notifications);
 
   return NextResponse.json({ appointment, appointmentId: appointment.id });
 }

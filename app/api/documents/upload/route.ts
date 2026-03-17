@@ -2,7 +2,9 @@ import { randomUUID } from "node:crypto";
 import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { createNotifications, type NotificationInput } from "@/lib/carebridge/notifications";
 import { fetchPatientByUserId } from "@/lib/carebridge/patients";
+import { fetchProviderById } from "@/lib/carebridge/providers";
 
 export const runtime = "nodejs";
 
@@ -48,10 +50,14 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "Files must be 10 MB or smaller." }, { status: 400 });
   }
 
+  let appointmentContext:
+    | { id: string; provider_id: string; start_time: string; timezone: string }
+    | null = null;
+
   if (appointmentId) {
     const { data: appointment } = await supabase
       .from("appointments")
-      .select("id")
+      .select("id,provider_id,start_time,timezone")
       .eq("id", appointmentId)
       .eq("patient_id", patient.id)
       .maybeSingle();
@@ -59,6 +65,8 @@ export async function POST(request: Request) {
     if (!appointment) {
       return NextResponse.json({ error: "Appointment not found." }, { status: 403 });
     }
+
+    appointmentContext = appointment as { id: string; provider_id: string; start_time: string; timezone: string };
   }
 
   const extension = file.name.includes(".") ? file.name.split(".").pop() : "bin";
@@ -105,6 +113,37 @@ export async function POST(request: Request) {
     entity_id: documentRow.id,
     metadata_json: { appointment_id: appointmentId, category, mime_type: file.type },
   });
+
+  if (appointmentContext) {
+    const provider = await fetchProviderById(supabase, appointmentContext.provider_id);
+    const appointmentLabel = new Intl.DateTimeFormat("en-US", {
+      dateStyle: "medium",
+      timeStyle: "short",
+      timeZone: appointmentContext.timezone,
+    }).format(new Date(appointmentContext.start_time));
+    const notifications: NotificationInput[] = [
+      {
+        userId: user.id,
+        type: "document_uploaded",
+        title: "Document uploaded",
+        body: `Your document was uploaded for the appointment on ${appointmentLabel}.`,
+        linkUrl: `/portal/documents?appointmentId=${appointmentId}`,
+        metadata: { appointment_id: appointmentId, document_id: documentRow.id, category },
+      },
+      ...(provider?.user_id
+        ? [{
+            userId: provider.user_id,
+            type: "document_uploaded" as const,
+            title: "Patient document uploaded",
+            body: `A patient uploaded a ${category.replace(/_/g, " ")} document for an upcoming appointment.`,
+            linkUrl: `/provider/appointments/${appointmentId}`,
+            metadata: { appointment_id: appointmentId, document_id: documentRow.id, patient_id: patient.id },
+          }]
+        : []),
+    ];
+
+    await createNotifications(admin, notifications);
+  }
 
   return NextResponse.json({ ok: true, documentId: documentRow.id });
 }

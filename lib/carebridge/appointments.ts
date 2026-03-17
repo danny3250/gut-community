@@ -6,6 +6,7 @@ export type AppointmentStatus = "requested" | "confirmed" | "cancelled" | "compl
 export type AppointmentWithProvider = AppointmentRecord & {
   providers?: {
     id?: string | null;
+    user_id?: string | null;
     slug?: string | null;
     display_name: string | null;
     credentials: string | null;
@@ -14,6 +15,7 @@ export type AppointmentWithProvider = AppointmentRecord & {
     organizations?: { name: string | null } | { name: string | null }[] | null;
   } | {
     id?: string | null;
+    user_id?: string | null;
     slug?: string | null;
     display_name: string | null;
     credentials: string | null;
@@ -25,11 +27,15 @@ export type AppointmentWithProvider = AppointmentRecord & {
 
 export type AppointmentWithPatient = AppointmentRecord & {
   patients?: {
+    id?: string | null;
+    user_id?: string | null;
     legal_name: string | null;
     email: string | null;
     organization_id?: string | null;
     organizations?: { name: string | null } | { name: string | null }[] | null;
   } | {
+    id?: string | null;
+    user_id?: string | null;
     legal_name: string | null;
     email: string | null;
     organization_id?: string | null;
@@ -52,7 +58,7 @@ export async function fetchAppointmentsForProvider(
 ) {
   let query = supabase
     .from("appointments")
-    .select("id,provider_id,patient_id,organization_id,status,appointment_type,start_time,end_time,timezone,visit_vendor,visit_external_id,join_url_placeholder,patients(legal_name,email,organization_id,organizations(name))")
+    .select("id,provider_id,patient_id,organization_id,status,appointment_type,start_time,end_time,timezone,visit_vendor,visit_external_id,join_url_placeholder,patients(id,user_id,legal_name,email,organization_id,organizations(name))")
     .eq("provider_id", providerId)
     .order("start_time", { ascending: true });
 
@@ -85,7 +91,7 @@ export async function fetchAppointmentsForPatient(
 ) {
   const { data, error } = await supabase
     .from("appointments")
-    .select("id,provider_id,patient_id,organization_id,status,appointment_type,start_time,end_time,timezone,visit_vendor,visit_external_id,join_url_placeholder,providers(id,slug,display_name,credentials,specialty,organization_id,organizations(name))")
+    .select("id,provider_id,patient_id,organization_id,status,appointment_type,start_time,end_time,timezone,visit_vendor,visit_external_id,join_url_placeholder,providers(id,user_id,slug,display_name,credentials,specialty,organization_id,organizations(name))")
     .eq("patient_id", patientId)
     .order("start_time", { ascending: true });
 
@@ -100,7 +106,7 @@ export async function fetchPatientAppointmentById(
 ) {
   const { data, error } = await supabase
     .from("appointments")
-    .select("id,provider_id,patient_id,organization_id,status,appointment_type,start_time,end_time,timezone,visit_vendor,visit_external_id,join_url_placeholder,providers(id,slug,display_name,credentials,specialty,organization_id,organizations(name))")
+    .select("id,provider_id,patient_id,organization_id,status,appointment_type,start_time,end_time,timezone,visit_vendor,visit_external_id,join_url_placeholder,providers(id,user_id,slug,display_name,credentials,specialty,organization_id,organizations(name))")
     .eq("id", appointmentId)
     .eq("patient_id", patientId)
     .maybeSingle();
@@ -116,7 +122,7 @@ export async function fetchProviderAppointmentById(
 ) {
   const { data, error } = await supabase
     .from("appointments")
-    .select("id,provider_id,patient_id,organization_id,status,appointment_type,start_time,end_time,timezone,visit_vendor,visit_external_id,join_url_placeholder,patients(legal_name,email,organization_id,organizations(name))")
+    .select("id,provider_id,patient_id,organization_id,status,appointment_type,start_time,end_time,timezone,visit_vendor,visit_external_id,join_url_placeholder,patients(id,user_id,legal_name,email,organization_id,organizations(name))")
     .eq("id", appointmentId)
     .eq("provider_id", providerId)
     .maybeSingle();

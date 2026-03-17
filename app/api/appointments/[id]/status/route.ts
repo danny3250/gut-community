@@ -1,5 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
+import { createAdminClient } from "@/lib/supabase/admin";
 import { createClient } from "@/lib/supabase/server";
+import { createNotifications, type NotificationInput } from "@/lib/carebridge/notifications";
 import { fetchProviderByUserId } from "@/lib/carebridge/providers";
 import { fetchProviderAppointmentById, updateAppointmentForProvider } from "@/lib/carebridge/appointments";
 
@@ -40,5 +42,29 @@ export async function POST(request: NextRequest, { params }: RouteContext) {
   }
 
   await updateAppointmentForProvider(supabase, provider.id, id, { status: payload.status });
+  const patientUserId = Array.isArray(appointment.patients) ? appointment.patients[0]?.user_id : appointment.patients?.user_id;
+  if (patientUserId) {
+    const notifications: NotificationInput[] = [
+      {
+        userId: patientUserId,
+        type: payload.status === "cancelled" ? "appointment_cancelled" : "appointment_reminder",
+        title:
+          payload.status === "confirmed"
+            ? "Appointment confirmed"
+            : payload.status === "completed"
+              ? "Appointment completed"
+              : payload.status === "no_show"
+                ? "Appointment marked no-show"
+                : payload.status === "cancelled"
+                  ? "Appointment cancelled"
+                  : "Appointment updated",
+        body: `Your provider updated the appointment status to ${payload.status.replace(/_/g, " ")}.`,
+        linkUrl: `/portal/appointments/${id}`,
+        metadata: { appointment_id: id, status: payload.status },
+      },
+    ];
+    const admin = createAdminClient();
+    await createNotifications(admin, notifications);
+  }
   return NextResponse.json({ ok: true });
 }

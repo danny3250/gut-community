@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { createNotification } from "@/lib/carebridge/notifications";
 import { getCurrentUserWithRole } from "@/lib/auth/session";
 
 type StatusPayload = {
@@ -26,9 +27,9 @@ export async function PATCH(
   const admin = createAdminClient();
   const { data: existingProvider, error: providerError } = await admin
     .from("providers")
-    .select("id,organization_id,verification_status")
+    .select("id,user_id,display_name,organization_id,verification_status")
     .eq("id", id)
-    .maybeSingle<{ id: string; organization_id: string | null; verification_status: string }>();
+    .maybeSingle<{ id: string; user_id: string; display_name: string | null; organization_id: string | null; verification_status: string }>();
 
   if (providerError || !existingProvider) {
     return NextResponse.json({ error: providerError?.message ?? "Provider not found." }, { status: 404 });
@@ -69,6 +70,42 @@ export async function PATCH(
       previous_status: existingProvider.verification_status,
       next_status: payload.status,
       rejection_reason: payload.rejectionReason ?? null,
+    },
+  });
+
+  const notificationType =
+    payload.status === "verified"
+      ? "provider_verified"
+      : payload.status === "rejected"
+        ? "provider_rejected"
+        : payload.status === "suspended"
+          ? "provider_suspended"
+          : "provider_application_received";
+
+  await createNotification(admin, {
+    userId: existingProvider.user_id,
+    type: notificationType,
+    title:
+      payload.status === "verified"
+        ? "Provider profile verified"
+        : payload.status === "rejected"
+          ? "Provider application not approved"
+          : payload.status === "suspended"
+            ? "Provider access suspended"
+            : "Provider application updated",
+    body:
+      payload.status === "verified"
+        ? "Your provider profile is now visible to patients and can accept bookings."
+        : payload.status === "rejected"
+          ? payload.rejectionReason?.trim() || "Review the notes on your application and update your information to resubmit."
+          : payload.status === "suspended"
+            ? "Your provider access is temporarily disabled. Public listing and bookings are paused."
+            : "Your provider application has been updated.",
+    linkUrl: "/provider",
+    metadata: {
+      provider_id: id,
+      previous_status: existingProvider.verification_status,
+      next_status: payload.status,
     },
   });
 
