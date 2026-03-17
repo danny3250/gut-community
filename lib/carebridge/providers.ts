@@ -30,6 +30,8 @@ export async function fetchPublicProviders(supabase: SupabaseClient) {
 }
 
 export async function fetchProviderBySlug(supabase: SupabaseClient, slug: string) {
+  const normalizedSlug = slugifyProviderName(slug);
+
   const { data, error } = await supabase
     .from("providers")
     .select("id,organization_id,slug,display_name,credentials,specialty,bio,states_served,telehealth_enabled,areas_of_care,visit_types,organizations(name,slug)")
@@ -37,8 +39,27 @@ export async function fetchProviderBySlug(supabase: SupabaseClient, slug: string
     .maybeSingle();
 
   if (error) throw error;
-  if (!data) return null;
-  return normalizeProviderRow(data as ProviderRow);
+  if (data) {
+    return normalizeProviderRow(data as ProviderRow);
+  }
+
+  const { data: fallbackRows, error: fallbackError } = await supabase
+    .from("providers")
+    .select("id,organization_id,slug,display_name,credentials,specialty,bio,states_served,telehealth_enabled,areas_of_care,visit_types,organizations(name,slug)")
+    .order("display_name", { ascending: true });
+
+  if (fallbackError) throw fallbackError;
+
+  const matched = ((fallbackRows ?? []) as ProviderRow[]).find((row) => {
+    const rowSlug = row.slug ?? slugifyProviderName(row.display_name);
+    return rowSlug === slug || rowSlug === normalizedSlug;
+  });
+
+  if (!matched) {
+    return null;
+  }
+
+  return normalizeProviderRow(matched);
 }
 
 export async function fetchProviderByUserId(supabase: SupabaseClient, userId: string) {
@@ -80,7 +101,7 @@ function normalizeProviderRow(row: ProviderRow): ProviderDirectoryRecord {
   return {
     id: row.id,
     organization_id: row.organization_id ?? null,
-    slug: row.slug ?? row.display_name.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, ""),
+    slug: row.slug ?? slugifyProviderName(row.display_name),
     display_name: row.display_name,
     credentials: row.credentials,
     specialty: row.specialty,
@@ -91,4 +112,8 @@ function normalizeProviderRow(row: ProviderRow): ProviderDirectoryRecord {
     visit_types: row.visit_types ?? [],
     organization: organization ? { name: organization.name, slug: organization.slug ?? null } : null,
   };
+}
+
+function slugifyProviderName(value: string) {
+  return value.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "");
 }
