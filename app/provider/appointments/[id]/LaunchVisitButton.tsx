@@ -3,7 +3,13 @@
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 
-export default function LaunchVisitButton({ appointmentId }: { appointmentId: string }) {
+export default function LaunchVisitButton({
+  appointmentId,
+  label = "Launch visit",
+}: {
+  appointmentId: string;
+  label?: string;
+}) {
   const router = useRouter();
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
@@ -33,7 +39,7 @@ export default function LaunchVisitButton({ appointmentId }: { appointmentId: st
   return (
     <div className="mt-5 flex flex-col gap-2">
       <button type="button" className="btn-primary" onClick={onLaunch} disabled={loading}>
-        {loading ? "Launching..." : "Launch visit"}
+        {loading ? "Launching..." : label}
       </button>
       {message ? <div className="text-sm muted">{message}</div> : null}
     </div>

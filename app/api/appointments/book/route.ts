@@ -121,5 +121,5 @@ export async function POST(request: NextRequest) {
     },
   });
 
-  return NextResponse.json({ appointment });
+  return NextResponse.json({ appointment, appointmentId: appointment.id });
 }

@@ -3,7 +3,13 @@
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 
-export default function JoinVisitButton({ appointmentId }: { appointmentId: string }) {
+export default function JoinVisitButton({
+  appointmentId,
+  label = "Join visit",
+}: {
+  appointmentId: string;
+  label?: string;
+}) {
   const router = useRouter();
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
@@ -33,7 +39,7 @@ export default function JoinVisitButton({ appointmentId }: { appointmentId: stri
   return (
     <div className="mt-4 flex flex-col gap-2">
       <button type="button" className="btn-secondary px-4 py-2 text-sm" onClick={onJoin} disabled={loading}>
-        {loading ? "Opening..." : "Join visit"}
+        {loading ? "Opening..." : label}
       </button>
       {message ? <div className="text-sm muted">{message}</div> : null}
     </div>

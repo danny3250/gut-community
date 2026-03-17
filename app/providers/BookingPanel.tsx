@@ -87,7 +87,7 @@ export default function BookingPanel({
       }),
     });
 
-    const payload = (await response.json()) as { error?: string };
+    const payload = (await response.json()) as { error?: string; appointmentId?: string };
     setLoading(false);
 
     if (!response.ok) {
@@ -95,7 +95,13 @@ export default function BookingPanel({
       return;
     }
 
-    router.push("/portal/appointments?booked=1");
+    if (!payload.appointmentId) {
+      setMessage("Your appointment was created, but the confirmation page could not be opened.");
+      router.push("/portal/appointments?booked=1");
+      return;
+    }
+
+    router.push(`/portal/appointments/${payload.appointmentId}/confirmed`);
     router.refresh();
   }
 

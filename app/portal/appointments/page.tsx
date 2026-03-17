@@ -1,30 +1,18 @@
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
-import { fetchAppointmentsForPatient } from "@/lib/carebridge/appointments";
+import AppointmentStatusBadge from "@/app/components/AppointmentStatusBadge";
+import AppointmentActionButton from "@/app/components/appointments/AppointmentActionButton";
+import {
+  AppointmentWithProvider,
+  fetchAppointmentsForPatient,
+  formatAppointmentDateTime,
+  getAppointmentTimingState,
+} from "@/lib/carebridge/appointments";
 import { getOrCreatePatientRecord } from "@/lib/carebridge/patients";
 import JoinVisitButton from "./JoinVisitButton";
 
 type PortalAppointmentsPageProps = {
   searchParams: Promise<{ booked?: string }>;
-};
-
-type AppointmentWithProvider = {
-  id: string;
-  status: string;
-  appointment_type: string;
-  start_time: string;
-  end_time: string;
-  timezone: string;
-  join_url_placeholder: string | null;
-  providers?: {
-    display_name: string | null;
-    credentials: string | null;
-    specialty: string | null;
-  } | {
-    display_name: string | null;
-    credentials: string | null;
-    specialty: string | null;
-  }[] | null;
 };
 
 export default async function PortalAppointmentsPage({ searchParams }: PortalAppointmentsPageProps) {
@@ -39,32 +27,31 @@ export default async function PortalAppointmentsPage({ searchParams }: PortalApp
   }
 
   const patientId = await getOrCreatePatientRecord(supabase, user);
-  const appointments = (await fetchAppointmentsForPatient(supabase, patientId)) as AppointmentWithProvider[];
+  const appointments = await fetchAppointmentsForPatient(supabase, patientId);
+  const now = new Date();
 
   const upcoming = appointments.filter(
     (appointment) =>
-      appointment.status !== "completed" &&
-      appointment.status !== "cancelled" &&
-      new Date(appointment.end_time) >= new Date()
+      !["completed", "cancelled", "no_show"].includes(appointment.status) &&
+      new Date(appointment.end_time) >= now
   );
   const past = appointments.filter(
     (appointment) =>
-      appointment.status === "completed" ||
-      appointment.status === "cancelled" ||
-      new Date(appointment.end_time) < new Date()
+      ["completed", "cancelled", "no_show"].includes(appointment.status) ||
+      new Date(appointment.end_time) < now
   );
 
   return (
     <main className="grid gap-5">
       <section className="panel px-6 py-6 sm:px-8">
         <span className="eyebrow">Appointments</span>
-        <h1 className="mt-4 text-3xl font-semibold">Upcoming, past, and requested visits</h1>
+        <h1 className="mt-4 text-3xl font-semibold">Keep your upcoming care and visit details in one place.</h1>
         <p className="mt-3 max-w-2xl text-sm leading-6 muted">
-          Review upcoming care, track appointment status, and use future telehealth launch links from this one place.
+          Review scheduled appointments, open telehealth visits when they become available, and manage changes without leaving the portal.
         </p>
         {resolvedSearchParams.booked === "1" ? (
           <div className="mt-4 rounded-2xl border border-[var(--border)] bg-white/70 p-3 text-sm">
-            Appointment request submitted. A provider can now confirm or update the visit status.
+            Your appointment request has been submitted. You can track the status below.
           </div>
         ) : null}
       </section>
@@ -73,33 +60,33 @@ export default async function PortalAppointmentsPage({ searchParams }: PortalApp
         <div className="flex items-center justify-between gap-3">
           <h2 className="text-2xl font-semibold">Upcoming appointments</h2>
           <Link href="/providers" className="btn-secondary px-4 py-2 text-sm">
-            Book another visit
+            Browse providers
           </Link>
         </div>
-        <div className="mt-5 grid gap-3">
+        <div className="mt-5 grid gap-4">
           {upcoming.length === 0 ? (
-            <div className="rounded-[24px] border border-[var(--border)] bg-white/72 px-4 py-4 text-sm muted">
-              No upcoming appointments yet.
-            </div>
+            <EmptyState
+              title="You don’t have any upcoming appointments yet."
+              body="When you’re ready, browse the provider directory to book your first visit."
+              href="/providers"
+              cta="Book an appointment"
+            />
           ) : (
-            upcoming.map((appointment) => (
-              <AppointmentCard key={appointment.id} appointment={appointment} />
-            ))
+            upcoming.map((appointment) => <PatientAppointmentCard key={appointment.id} appointment={appointment} />)
           )}
         </div>
       </section>
 
       <section className="panel px-6 py-6 sm:px-8">
-        <h2 className="text-2xl font-semibold">Past and completed appointments</h2>
-        <div className="mt-5 grid gap-3">
+        <h2 className="text-2xl font-semibold">Past appointments</h2>
+        <div className="mt-5 grid gap-4">
           {past.length === 0 ? (
-            <div className="rounded-[24px] border border-[var(--border)] bg-white/72 px-4 py-4 text-sm muted">
-              Past appointments will appear here.
-            </div>
+            <EmptyState
+              title="Past appointments will appear here."
+              body="Completed and cancelled visits will show up once you’ve had an appointment."
+            />
           ) : (
-            past.map((appointment) => (
-              <AppointmentCard key={appointment.id} appointment={appointment} />
-            ))
+            past.map((appointment) => <PatientAppointmentCard key={appointment.id} appointment={appointment} />)
           )}
         </div>
       </section>
@@ -107,9 +94,12 @@ export default async function PortalAppointmentsPage({ searchParams }: PortalApp
   );
 }
 
-function AppointmentCard({ appointment }: { appointment: AppointmentWithProvider }) {
-  const provider = Array.isArray(appointment.providers) ? appointment.providers[0] : appointment.providers;
-  const isTelehealth = appointment.appointment_type === "telehealth";
+function PatientAppointmentCard({ appointment }: { appointment: AppointmentWithProvider }) {
+  const provider = Array.isArray(appointment.providers) ? appointment.providers[0] ?? null : appointment.providers ?? null;
+  const organization = provider?.organizations;
+  const organizationName = Array.isArray(organization) ? organization[0]?.name : organization?.name;
+  const timing = getAppointmentTimingState(appointment);
+  const isUpcoming = !["completed", "cancelled", "no_show"].includes(appointment.status) && new Date(appointment.end_time) >= new Date();
 
   return (
     <div className="rounded-[24px] border border-[var(--border)] bg-white/72 px-5 py-5">
@@ -120,36 +110,79 @@ function AppointmentCard({ appointment }: { appointment: AppointmentWithProvider
             {[provider?.credentials, provider?.specialty].filter(Boolean).join(" · ")}
           </div>
         </div>
-        <span className="rounded-full border border-[var(--border)] px-3 py-1 text-xs font-semibold">
-          {appointment.status}
-        </span>
+        <AppointmentStatusBadge status={appointment.status} />
       </div>
 
-      <div className="mt-4 grid gap-2 text-sm leading-6 muted sm:grid-cols-3">
-        <div>
-          <div className="font-medium text-[var(--foreground)]">Visit time</div>
-          <div>
-            {new Intl.DateTimeFormat("en-US", {
-              dateStyle: "medium",
-              timeStyle: "short",
-              timeZone: appointment.timezone,
-            }).format(new Date(appointment.start_time))}
-          </div>
-        </div>
-        <div>
-          <div className="font-medium text-[var(--foreground)]">Appointment type</div>
-          <div>{appointment.appointment_type.replace("_", " ")}</div>
-        </div>
-        <div>
-          <div className="font-medium text-[var(--foreground)]">Telehealth</div>
-          <div>{isTelehealth ? "Join link will appear here later" : "Not a telehealth visit"}</div>
-        </div>
+      <div className="mt-4 grid gap-3 text-sm leading-6 muted sm:grid-cols-4">
+        <Info label="Date and time" value={formatAppointmentDateTime(appointment)} />
+        <Info label="Timezone" value={appointment.timezone} />
+        <Info label="Appointment type" value={appointment.appointment_type.replace(/_/g, " ")} />
+        <Info label="Organization" value={organizationName ?? "Independent provider"} />
       </div>
 
-      {isTelehealth && appointment.join_url_placeholder ? (
-        <JoinVisitButton appointmentId={appointment.id} />
-      ) : isTelehealth ? (
-        <JoinVisitButton appointmentId={appointment.id} />
+      <div className="mt-5 flex flex-wrap gap-3">
+        <Link href={`/portal/appointments/${appointment.id}`} className="btn-secondary px-4 py-2 text-sm">
+          View details
+        </Link>
+        {isUpcoming ? (
+          <>
+            <Link href={`/portal/appointments/${appointment.id}/reschedule`} className="btn-secondary px-4 py-2 text-sm">
+              Reschedule
+            </Link>
+            <AppointmentActionButton
+              endpoint={`/api/appointments/${appointment.id}/cancel`}
+              label="Cancel"
+              pendingLabel="Cancelling..."
+              confirmMessage="Cancel this appointment?"
+            />
+            {timing.canJoin ? <JoinVisitButton appointmentId={appointment.id} label="Join visit" /> : (
+              <div className="rounded-2xl border border-[var(--border)] bg-white/70 px-4 py-2 text-sm muted">
+                {timing.label}
+              </div>
+            )}
+          </>
+        ) : provider?.slug ? (
+          <Link href={`/providers/${provider.slug}`} className="btn-secondary px-4 py-2 text-sm">
+            Book again
+          </Link>
+        ) : null}
+      </div>
+
+      {timing.helperText ? <p className="mt-3 text-sm leading-6 muted">{timing.helperText}</p> : null}
+    </div>
+  );
+}
+
+function Info({ label, value }: { label: string; value: string }) {
+  return (
+    <div>
+      <div className="font-medium text-[var(--foreground)]">{label}</div>
+      <div className="capitalize">{value}</div>
+    </div>
+  );
+}
+
+function EmptyState({
+  title,
+  body,
+  href,
+  cta,
+}: {
+  title: string;
+  body: string;
+  href?: string;
+  cta?: string;
+}) {
+  return (
+    <div className="rounded-[24px] border border-[var(--border)] bg-white/72 px-5 py-5">
+      <h3 className="text-lg font-semibold">{title}</h3>
+      <p className="mt-2 text-sm leading-6 muted">{body}</p>
+      {href && cta ? (
+        <div className="mt-4">
+          <Link href={href} className="btn-secondary px-4 py-2 text-sm">
+            {cta}
+          </Link>
+        </div>
       ) : null}
     </div>
   );
