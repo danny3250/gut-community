@@ -10,7 +10,7 @@ export default async function ProviderOnboardingPage() {
     data: { user },
   } = await supabase.auth.getUser();
 
-  if (!user) redirect("/login?next=/provider/onboarding");
+  if (!user) redirect("/login?next=/providers/join/apply");
 
   const [provider, organizations] = await Promise.all([
     fetchProviderByUserId(supabase, user.id),

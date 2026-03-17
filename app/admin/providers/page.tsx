@@ -90,8 +90,8 @@ export default async function AdminProvidersPage({ searchParams }: AdminProvider
                         View public profile
                       </Link>
                     ) : null}
-                    <Link href="/provider/onboarding" className="btn-secondary px-4 py-2 text-sm">
-                      View onboarding route
+                    <Link href="/providers/join" className="btn-secondary px-4 py-2 text-sm">
+                      View provider entry page
                     </Link>
                   </div>
                 </div>

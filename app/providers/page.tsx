@@ -66,12 +66,16 @@ export default async function ProvidersPage({ searchParams }: ProvidersPageProps
 
         <div className="panel-strong px-6 py-6">
           <div className="text-sm font-semibold uppercase tracking-[0.18em] text-[var(--accent-strong)]">
-            Directory filters
+            For providers
           </div>
           <p className="mt-3 text-sm leading-6 muted">
-            Use the search and filters below to narrow the list quickly without losing the overall view of
-            who is available.
+            CareBridge reviews applications before providers become visible in the directory, bookable, or verified across the platform.
           </p>
+          <div className="mt-5">
+            <Link href="/providers/join" className="btn-secondary px-4 py-2 text-sm">
+              Join CareBridge
+            </Link>
+          </div>
         </div>
       </section>
 

@@ -73,19 +73,19 @@ export default function SignupForm({
       </div>
 
       <button className="btn-primary w-full" disabled={loading} type="submit">
-        {loading ? "Creating..." : "Create account"}
+        {loading ? (role === "provider" ? "Starting application..." : "Creating account...") : role === "provider" ? "Start provider application" : "Create account"}
       </button>
 
       <p className="text-sm leading-6 muted">
         {role === "provider"
-          ? "Create your account, verify your email, and continue into provider onboarding for review."
+          ? "Create your provider applicant account, verify your email, and continue into reviewed onboarding."
           : "Start with public resources and step into protected portal workflows as CareBridge expands."}
       </p>
 
       <p className="text-sm muted">
-        Already a member?{" "}
+        {role === "provider" ? "Already started an application? " : "Already a member? "}
         <Link href={`/login?next=${encodeURIComponent(nextHref)}`} className="font-semibold text-[var(--accent-strong)]">
-          Sign in
+          {role === "provider" ? "Sign in to continue" : "Sign in"}
         </Link>
       </p>
 

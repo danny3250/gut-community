@@ -17,7 +17,7 @@ export default async function ProviderDashboardPage() {
   if (!user) redirect("/login");
 
   const provider = await fetchProviderByUserId(supabase, user.id);
-  if (!provider) redirect("/provider/onboarding");
+  if (!provider) redirect("/providers/join/apply");
 
   const isVerified = isProviderVerified(provider);
   const appointments = isVerified ? await fetchAppointmentsForProvider(supabase, provider.id) : [];
