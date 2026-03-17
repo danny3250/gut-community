@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
-import { fetchProviderPatientHealthDetail } from "@/lib/carebridge/health";
+import { getPatientCheckinSummaryForProvider } from "@/lib/carebridge/checkins";
 import { fetchProviderByUserId } from "@/lib/carebridge/providers";
 
 type ProviderPatientDetailPageProps = {
@@ -20,7 +20,7 @@ export default async function ProviderPatientDetailPage({ params }: ProviderPati
   const provider = await fetchProviderByUserId(supabase, user.id);
   if (!provider) redirect("/portal");
 
-  const detail = await fetchProviderPatientHealthDetail(supabase, provider.id, id);
+  const detail = await getPatientCheckinSummaryForProvider(supabase, provider.id, id);
   if (!detail) notFound();
 
   return (
@@ -36,8 +36,10 @@ export default async function ProviderPatientDetailPage({ params }: ProviderPati
         </p>
       </section>
 
-      <section className="grid gap-4 lg:grid-cols-3">
+      <section className="grid gap-4 lg:grid-cols-5">
         <SummaryCard label="Recent average feeling" value={detail.trends.averageFeeling ? `${detail.trends.averageFeeling} / 5` : "No data"} />
+        <SummaryCard label="Average sleep" value={detail.trends.averageSleepHours ? `${detail.trends.averageSleepHours} hrs` : "No data"} />
+        <SummaryCard label="Average stress" value={detail.trends.averageStressLevel ? `${detail.trends.averageStressLevel} / 5` : "No data"} />
         <TrendList title="Top symptoms" items={detail.trends.symptomFrequency.map((item) => `${item.name} (${item.count})`)} emptyText="No symptoms logged yet." />
         <TrendList title="Recent foods" items={detail.trends.recentFoods.map((item) => `${item.name} (${item.count})`)} emptyText="No foods logged yet." />
       </section>
@@ -60,7 +62,7 @@ export default async function ProviderPatientDetailPage({ params }: ProviderPati
                       <div className="mt-1 text-sm muted">Overall feeling: {checkin.overall_feeling} / 5</div>
                     </div>
                     <div className="text-sm muted">
-                      Sleep: {lifestyle?.sleep_hours ?? "—"} hrs · Stress: {lifestyle?.stress_level ?? "—"} / 5
+                      Sleep: {lifestyle?.sleep_hours ?? "-"} hrs | Stress: {lifestyle?.stress_level ?? "-"} / 5
                     </div>
                   </div>
                   <div className="mt-4 grid gap-3 lg:grid-cols-2">

@@ -2,21 +2,50 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import type { CheckinOption } from "@/lib/carebridge/health";
+import type { CheckinOption, DailyCheckinRecord } from "@/lib/carebridge/checkins";
 
 type CheckInFormProps = {
   symptomOptions: CheckinOption[];
   foodOptions: CheckinOption[];
+  initialCheckin?: DailyCheckinRecord | null;
 };
 
-export default function CheckInForm({ symptomOptions, foodOptions }: CheckInFormProps) {
+export default function CheckInForm({
+  symptomOptions,
+  foodOptions,
+  initialCheckin = null,
+}: CheckInFormProps) {
   const router = useRouter();
-  const [overallFeeling, setOverallFeeling] = useState(3);
-  const [sleepHours, setSleepHours] = useState("8");
-  const [stressLevel, setStressLevel] = useState(3);
-  const [notes, setNotes] = useState("");
-  const [selectedSymptoms, setSelectedSymptoms] = useState<Record<string, number>>({});
-  const [selectedFoods, setSelectedFoods] = useState<Record<string, { quantity: string; notes: string }>>({});
+  const initialLifestyle = Array.isArray(initialCheckin?.lifestyle_metrics)
+    ? initialCheckin?.lifestyle_metrics[0] ?? null
+    : initialCheckin?.lifestyle_metrics ?? null;
+
+  const [overallFeeling, setOverallFeeling] = useState(initialCheckin?.overall_feeling ?? 3);
+  const [sleepHours, setSleepHours] = useState(
+    typeof initialLifestyle?.sleep_hours === "number" ? String(initialLifestyle.sleep_hours) : "8"
+  );
+  const [stressLevel, setStressLevel] = useState(initialLifestyle?.stress_level ?? 3);
+  const [notes, setNotes] = useState(initialCheckin?.notes ?? "");
+  const [selectedSymptoms, setSelectedSymptoms] = useState<Record<string, number>>(
+    Object.fromEntries(
+      (initialCheckin?.checkin_symptoms ?? [])
+        .map((row) => {
+          const symptom = Array.isArray(row.symptoms) ? row.symptoms[0] : row.symptoms;
+          return symptom ? [symptom.id, row.severity] : null;
+        })
+        .filter((item): item is [string, number] => !!item)
+    )
+  );
+  const [selectedFoods, setSelectedFoods] = useState<Record<string, { quantity: string; notes: string }>>(
+    Object.fromEntries(
+      (initialCheckin?.checkin_foods ?? [])
+        .map((row) => {
+          const food = Array.isArray(row.foods) ? row.foods[0] : row.foods;
+          return food ? [food.id, { quantity: row.quantity ?? "", notes: row.notes ?? "" }] : null;
+        })
+        .filter((item): item is [string, { quantity: string; notes: string }] => !!item)
+    )
+  );
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
 
@@ -69,18 +98,20 @@ export default function CheckInForm({ symptomOptions, foodOptions }: CheckInForm
     setLoading(false);
 
     if (!response.ok) {
-      setMessage(payload.error ?? "Could not save today’s check-in.");
+      setMessage(payload.error ?? "Could not save today's check-in.");
       return;
     }
 
-    router.push("/portal/health");
+    router.push("/portal/health?saved=1");
     router.refresh();
   }
 
   return (
     <section className="panel px-6 py-6 sm:px-8">
       <span className="eyebrow">Daily check-in</span>
-      <h1 className="mt-4 text-3xl font-semibold">Take a quick pulse on today.</h1>
+      <h1 className="mt-4 text-3xl font-semibold">
+        {initialCheckin ? "Update today's check-in." : "Take a quick pulse on today."}
+      </h1>
       <p className="mt-3 max-w-2xl text-sm leading-6 muted">
         Keep it simple: log how you felt, what stood out, and a few context clues that can support future care and recipe guidance.
       </p>
@@ -213,7 +244,7 @@ export default function CheckInForm({ symptomOptions, foodOptions }: CheckInForm
 
       <div className="mt-6">
         <button type="button" className="btn-primary" onClick={onSubmit} disabled={loading}>
-          {loading ? "Saving..." : "Save today’s check-in"}
+          {loading ? "Saving..." : initialCheckin ? "Update today's check-in" : "Save today's check-in"}
         </button>
       </div>
     </section>

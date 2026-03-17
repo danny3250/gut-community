@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
 import { splitInstructionText } from "@/lib/recipes/helpers";
+import { formatRecipeFacetLabel, getRecipeBySlug } from "@/lib/carebridge/recipes";
 import FavoriteButton from "./FavoriteButton";
 
 type Nutrition = {
@@ -26,6 +27,7 @@ type RecipeRecord = {
   prep_time_minutes: number | null;
   cook_time_minutes: number | null;
   total_time_minutes: number | null;
+  difficulty?: string | null;
   notes: string | null;
   digestion_notes: string | null;
   status: string;
@@ -33,11 +35,6 @@ type RecipeRecord = {
   image_url?: string | null;
   photo_url?: string | null;
   nutrition?: Nutrition | null;
-};
-
-type TagRow = {
-  id: string;
-  name: string;
 };
 
 type IngredientRow = {
@@ -96,17 +93,25 @@ export default async function RecipeDetailPage({
   params: Promise<{ id: string }>;
 }) {
   const supabase = await createClient();
-  const { id: recipeId } = await params;
+  const { id: recipeIdOrSlug } = await params;
+  const recipe = (await getRecipeBySlug(supabase, recipeIdOrSlug)) as RecipeRecord & {
+    conditions_supported: string[];
+    tags: string[];
+    avoids: string[];
+    why_this_helps: string | null;
+    provider_links: Array<{
+      relation_type: string;
+      provider: {
+        id: string;
+        slug: string;
+        display_name: string;
+        credentials: string | null;
+        specialty: string | null;
+      } | null;
+    }>;
+  } | null;
 
-  const { data: recipe, error } = await supabase
-    .from("recipes")
-    .select(
-      "id,title,slug,summary,description,ingredients_raw,instructions_raw,ingredients,instructions,servings,prep_time_minutes,cook_time_minutes,total_time_minutes,notes,digestion_notes,status,created_by,image_url,photo_url,nutrition"
-    )
-    .eq("id", recipeId)
-    .single<RecipeRecord>();
-
-  if (error || !recipe) {
+  if (!recipe) {
     return (
       <main className="shell py-6 sm:py-10">
         <div className="panel px-6 py-4 text-sm">Recipe not found.</div>
@@ -128,7 +133,7 @@ export default async function RecipeDetailPage({
     );
   }
 
-  const [{ data: ingredientRows }, { data: stepRows }, { data: links }] = await Promise.all([
+  const [{ data: ingredientRows }, { data: stepRows }] = await Promise.all([
     supabase
       .from("recipe_ingredients")
       .select("sort_order,raw_text,raw_line,quantity_text,unit,ingredient_name,item_name,preparation_note,notes,optional_flag")
@@ -139,19 +144,7 @@ export default async function RecipeDetailPage({
       .select("step_number,body")
       .eq("recipe_id", recipe.id)
       .order("step_number", { ascending: true }),
-    supabase.from("recipe_tag_map").select("tag_id").eq("recipe_id", recipe.id),
   ]);
-
-  const tagIds = (links ?? []).map((row: { tag_id: string }) => row.tag_id);
-  let tags: TagRow[] = [];
-  if (tagIds.length > 0) {
-    const { data: tagRows } = await supabase
-      .from("recipe_tags")
-      .select("id,name")
-      .in("id", tagIds)
-      .order("name", { ascending: true });
-    tags = (tagRows ?? []) as TagRow[];
-  }
 
   let isFav = false;
   if (user?.id && recipe.status === "published") {
@@ -183,6 +176,7 @@ export default async function RecipeDetailPage({
     formatMinutes(recipe.prep_time_minutes) ? `Prep ${formatMinutes(recipe.prep_time_minutes)}` : null,
     formatMinutes(recipe.cook_time_minutes) ? `Cook ${formatMinutes(recipe.cook_time_minutes)}` : null,
     formatMinutes(recipe.total_time_minutes) ? `Total ${formatMinutes(recipe.total_time_minutes)}` : null,
+    recipe.difficulty ? formatRecipeFacetLabel(recipe.difficulty) : null,
   ].filter(Boolean);
 
   return (
@@ -236,15 +230,25 @@ export default async function RecipeDetailPage({
                 {item}
               </span>
             ))}
-            {tags.map((tag) => (
+            {recipe.tags.map((tag) => (
               <span
-                key={tag.id}
+                key={tag}
                 className="rounded-full bg-[var(--accent-soft)] px-3 py-1 text-[var(--accent-strong)]"
               >
-                {tag.name}
+                {formatRecipeFacetLabel(tag)}
               </span>
             ))}
           </div>
+
+          {recipe.conditions_supported.length > 0 ? (
+            <div className="flex flex-wrap gap-2 text-sm">
+              {recipe.conditions_supported.map((condition) => (
+                <span key={condition} className="rounded-full border border-[var(--border)] px-3 py-1">
+                  {formatRecipeFacetLabel(condition)}
+                </span>
+              ))}
+            </div>
+          ) : null}
 
           {isOwner ? (
             <div className="pt-1">
@@ -266,6 +270,65 @@ export default async function RecipeDetailPage({
             <NutItem label="Fat (g)" value={nutrition.fat_g} />
             <NutItem label="Fiber (g)" value={nutrition.fiber_g} />
             <NutItem label="Sugar (g)" value={nutrition.sugar_g} />
+          </div>
+        </section>
+      ) : null}
+
+      {(recipe.why_this_helps || recipe.avoids.length > 0 || recipe.provider_links.length > 0) ? (
+        <section className="grid gap-6 lg:grid-cols-3">
+          {recipe.why_this_helps ? (
+            <div className="panel px-5 py-5 lg:col-span-2">
+              <h2 className="text-lg font-medium">Why this may be helpful</h2>
+              <p className="mt-3 text-sm leading-6 muted sm:text-base">{recipe.why_this_helps}</p>
+            </div>
+          ) : null}
+
+          {recipe.avoids.length > 0 ? (
+            <div className="panel px-5 py-5">
+              <h2 className="text-lg font-medium">Supports avoiding</h2>
+              <div className="mt-3 flex flex-wrap gap-2">
+                {recipe.avoids.map((item) => (
+                  <span key={item} className="rounded-full border border-[var(--border)] px-3 py-1 text-sm">
+                    {formatRecipeFacetLabel(item)}
+                  </span>
+                ))}
+              </div>
+            </div>
+          ) : null}
+        </section>
+      ) : null}
+
+      {recipe.provider_links.length > 0 ? (
+        <section className="panel px-5 py-5">
+          <h2 className="text-lg font-medium">Provider-linked guidance</h2>
+          <p className="mt-2 text-sm leading-6 muted">
+            Provider-linked recipe notes are informational and do not replace a formal clinical recommendation.
+          </p>
+          <div className="mt-4 grid gap-3 md:grid-cols-2">
+            {recipe.provider_links.map((link) => {
+              if (!link.provider) return null;
+
+              const relationLabel =
+                link.relation_type === "verified"
+                  ? "Verified by"
+                  : link.relation_type === "created"
+                    ? "Created by"
+                    : "Recommended by";
+
+              return (
+                <div key={`${link.relation_type}-${link.provider.id}`} className="rounded-[24px] border border-[var(--border)] bg-white/72 px-4 py-4">
+                  <div className="text-xs font-semibold uppercase tracking-[0.18em] text-[var(--accent-strong)]">{relationLabel}</div>
+                  <div className="mt-2 text-lg font-semibold">
+                    {link.provider.display_name}
+                    {link.provider.credentials ? `, ${link.provider.credentials}` : ""}
+                  </div>
+                  {link.provider.specialty ? <div className="mt-1 text-sm muted">{link.provider.specialty}</div> : null}
+                  <Link href={`/providers/${link.provider.slug}`} className="mt-3 inline-flex text-sm font-semibold text-[var(--accent-strong)]">
+                    View provider profile
+                  </Link>
+                </div>
+              );
+            })}
           </div>
         </section>
       ) : null}

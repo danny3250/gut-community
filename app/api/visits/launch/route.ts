@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
-import { fetchProviderByUserId } from "@/lib/carebridge/providers";
+import { fetchProviderByUserId, isProviderVerified } from "@/lib/carebridge/providers";
 import { TelehealthVisitService } from "@/services/telehealth/service";
 
 export async function POST(request: Request) {
@@ -16,6 +16,10 @@ export async function POST(request: Request) {
   const provider = await fetchProviderByUserId(supabase, user.id);
   if (!provider) {
     return NextResponse.json({ error: "Only providers can launch visits." }, { status: 403 });
+  }
+
+  if (!isProviderVerified(provider)) {
+    return NextResponse.json({ error: "Visit launch is unavailable until provider verification is complete." }, { status: 403 });
   }
 
   const { appointmentId } = (await request.json()) as { appointmentId?: string };

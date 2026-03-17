@@ -3,7 +3,7 @@ import { createClient } from "@/lib/supabase/server";
 import { createAppointment } from "@/lib/carebridge/appointments";
 import { getOrCreatePatientRecord } from "@/lib/carebridge/patients";
 import { getAvailableSlots } from "@/lib/carebridge/scheduling";
-import { fetchProviderById } from "@/lib/carebridge/providers";
+import { canProviderAcceptBookings, fetchProviderById, isProviderVerified } from "@/lib/carebridge/providers";
 import { Role } from "@/lib/auth/roles";
 
 type BookingPayload = {
@@ -43,6 +43,14 @@ export async function POST(request: NextRequest) {
   const provider = await fetchProviderById(supabase, payload.providerId);
   if (!provider) {
     return NextResponse.json({ error: "Provider not found." }, { status: 404 });
+  }
+
+  if (!isProviderVerified(provider)) {
+    return NextResponse.json({ error: "This provider is not currently available for booking." }, { status: 403 });
+  }
+
+  if (!canProviderAcceptBookings(provider)) {
+    return NextResponse.json({ error: "This provider is not accepting new patients right now." }, { status: 403 });
   }
 
   const patientId = await getOrCreatePatientRecord(supabase, user);

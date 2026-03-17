@@ -151,7 +151,7 @@ export default async function ProvidersPage({ searchParams }: ProvidersPageProps
                 <div>
                   <h2 className="text-2xl font-semibold">{provider.display_name}</h2>
                   <p className="mt-1 text-sm muted">
-                    {[provider.credentials, provider.specialty].filter(Boolean).join(" · ")}
+                    {[provider.credentials, provider.specialty].filter(Boolean).join(" | ")}
                   </p>
                 </div>
                 <span

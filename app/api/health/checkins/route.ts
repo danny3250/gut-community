@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
-import { saveDailyCheckin, toDateKey } from "@/lib/carebridge/health";
+import { createDailyCheckin, toDateKey } from "@/lib/carebridge/checkins";
 
 type Payload = {
   overallFeeling?: number;
@@ -27,7 +27,7 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: "Overall feeling must be between 1 and 5." }, { status: 400 });
   }
 
-  const checkinId = await saveDailyCheckin(supabase, user.id, {
+  const checkinId = await createDailyCheckin(supabase, user.id, {
     checkinDate: toDateKey(new Date()),
     overallFeeling: payload.overallFeeling,
     notes: payload.notes ?? null,

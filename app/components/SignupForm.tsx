@@ -5,7 +5,13 @@ import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { createSupabaseClient } from "@/lib/supabaseClient";
 
-export default function SignupForm({ nextHref = "/portal" }: { nextHref?: string }) {
+export default function SignupForm({
+  nextHref = "/portal",
+  role = "patient",
+}: {
+  nextHref?: string;
+  role?: "patient" | "provider";
+}) {
   const router = useRouter();
   const supabase = createSupabaseClient();
 
@@ -23,6 +29,9 @@ export default function SignupForm({ nextHref = "/portal" }: { nextHref?: string
       email,
       password,
       options: {
+        data: {
+          requested_role: role,
+        },
         emailRedirectTo: `${window.location.origin}/auth/callback?next=${encodeURIComponent(nextHref)}`,
       },
     });
@@ -68,7 +77,9 @@ export default function SignupForm({ nextHref = "/portal" }: { nextHref?: string
       </button>
 
       <p className="text-sm leading-6 muted">
-        Start with public resources and step into protected portal workflows as CareBridge expands.
+        {role === "provider"
+          ? "Create your account, verify your email, and continue into provider onboarding for review."
+          : "Start with public resources and step into protected portal workflows as CareBridge expands."}
       </p>
 
       <p className="text-sm muted">

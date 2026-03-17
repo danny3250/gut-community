@@ -4,7 +4,18 @@ import Link from "next/link";
 import { useEffect, useState } from "react";
 import { createClient } from "@/lib/supabase/client";
 
-type RecipeRow = { id: string; title: string; description: string | null };
+type RecipeRow = {
+  id: string;
+  slug: string | null;
+  title: string | null;
+  name: string | null;
+  description: string | null;
+  summary: string | null;
+};
+
+function fallbackSlug(value: string) {
+  return value.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "");
+}
 
 export default function FavoritesDrawer({
   open,
@@ -35,7 +46,6 @@ export default function FavoritesDrawer({
         return;
       }
 
-      // 1) Get favorite recipe ids
       const { data: favRows, error: favErr } = await supabase
         .from("recipe_favorites")
         .select("recipe_id")
@@ -49,7 +59,7 @@ export default function FavoritesDrawer({
       }
 
       const ids = (favRows ?? [])
-        .map((r) => r.recipe_id as string)
+        .map((row) => row.recipe_id as string)
         .filter(Boolean);
 
       if (ids.length === 0) {
@@ -58,10 +68,9 @@ export default function FavoritesDrawer({
         return;
       }
 
-      // 2) Fetch recipes by those ids
       const { data: recipeRows, error: recipeErr } = await supabase
         .from("recipes")
-        .select("id,title,description")
+        .select("id,slug,title,name,description,summary")
         .in("id", ids)
         .order("created_at", { ascending: false });
 
@@ -81,45 +90,39 @@ export default function FavoritesDrawer({
 
   return (
     <div className="fixed inset-0 z-50">
-      {/* backdrop */}
-      <div
-        className="absolute inset-0 bg-black/40"
-        onClick={onClose}
-        aria-hidden="true"
-      />
+      <div className="absolute inset-0 bg-black/40" onClick={onClose} aria-hidden="true" />
 
-      {/* panel */}
-      <aside className="absolute right-0 top-0 h-full w-full max-w-sm bg-white shadow-xl p-4 flex flex-col">
+      <aside className="absolute right-0 top-0 flex h-full w-full max-w-sm flex-col bg-white p-4 shadow-xl">
         <div className="flex items-center justify-between">
-          <h2 className="text-lg font-semibold">★ Favorites</h2>
-          <button className="border rounded px-3 py-1" onClick={onClose}>
+          <h2 className="text-lg font-semibold">Saved recipes</h2>
+          <button className="rounded border px-3 py-1" onClick={onClose}>
             Close
           </button>
         </div>
 
-        <div className="mt-4 flex-1 overflow-auto space-y-2">
-          {err && <div className="text-sm">Error: {err}</div>}
+        <div className="mt-4 flex-1 space-y-2 overflow-auto">
+          {err ? <div className="text-sm">Error: {err}</div> : null}
 
           {loading ? (
-            <div className="text-sm opacity-70">Loading…</div>
+            <div className="text-sm opacity-70">Loading...</div>
           ) : recipes.length === 0 ? (
             <div className="text-sm opacity-70">
-              No saved recipes yet. Click ☆ Save on a recipe to add it here.
+              No saved recipes yet. Use Save on a recipe card to keep it here.
             </div>
           ) : (
-            recipes.map((r) => (
+            recipes.map((recipe) => (
               <Link
-                key={r.id}
-                href={`/recipes/${r.id}`}
+                key={recipe.id}
+                href={`/recipes/${recipe.slug ?? fallbackSlug(recipe.name ?? recipe.title ?? recipe.id)}`}
                 onClick={onClose}
-                className="block border rounded-lg p-3 hover:bg-black/5 transition"
+                className="block rounded-lg border p-3 transition hover:bg-black/5"
               >
-                <div className="font-medium">{r.title}</div>
-                {r.description && (
-                  <div className="text-sm opacity-80 mt-1 line-clamp-2">
-                    {r.description}
+                <div className="font-medium">{recipe.name ?? recipe.title ?? "Recipe"}</div>
+                {recipe.summary ?? recipe.description ? (
+                  <div className="mt-1 line-clamp-2 text-sm opacity-80">
+                    {recipe.summary ?? recipe.description}
                   </div>
-                )}
+                ) : null}
               </Link>
             ))
           )}

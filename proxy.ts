@@ -14,6 +14,7 @@ function matchesPrefix(pathname: string, prefixes: string[]) {
 }
 
 function getRequiredAreaRole(pathname: string): "patient" | "provider" | "admin" | null {
+  if (pathname === "/provider/onboarding" || pathname.startsWith("/provider/onboarding/")) return null;
   if (pathname === "/provider" || pathname.startsWith("/provider/")) return "provider";
   if (pathname === "/admin" || pathname.startsWith("/admin/")) return "admin";
   if (pathname === "/portal" || pathname.startsWith("/portal/")) return "patient";

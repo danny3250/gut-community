@@ -7,9 +7,10 @@ import { createClient } from "@/lib/supabase/client";
 type ReplyComposerProps = {
   postId: string;
   canMarkOfficial: boolean;
+  helperMessage?: string | null;
 };
 
-export default function ReplyComposer({ postId, canMarkOfficial }: ReplyComposerProps) {
+export default function ReplyComposer({ postId, canMarkOfficial, helperMessage = null }: ReplyComposerProps) {
   const supabase = createClient();
   const router = useRouter();
   const [body, setBody] = useState("");
@@ -82,6 +83,10 @@ export default function ReplyComposer({ postId, canMarkOfficial }: ReplyComposer
             </span>
           </span>
         </label>
+      ) : helperMessage ? (
+        <div className="rounded-[22px] border border-[var(--border)] bg-white/72 px-4 py-3 text-sm muted">
+          {helperMessage}
+        </div>
       ) : null}
 
       {message ? <div className="rounded-[22px] border border-[var(--border)] bg-white/72 px-4 py-3 text-sm">{message}</div> : null}

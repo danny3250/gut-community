@@ -177,6 +177,8 @@ export async function saveDailyCheckin(
 export function summarizeCheckinTrends(checkins: DailyCheckinRecord[]) {
   const symptomCounts = new Map<string, { name: string; count: number }>();
   const foodCounts = new Map<string, { name: string; count: number }>();
+  const sleepValues: number[] = [];
+  const stressValues: number[] = [];
 
   for (const checkin of checkins) {
     for (const symptomRow of checkin.checkin_symptoms ?? []) {
@@ -194,6 +196,14 @@ export function summarizeCheckinTrends(checkins: DailyCheckinRecord[]) {
       current.count += 1;
       foodCounts.set(food.slug, current);
     }
+
+    const lifestyle = Array.isArray(checkin.lifestyle_metrics) ? checkin.lifestyle_metrics[0] : checkin.lifestyle_metrics;
+    if (typeof lifestyle?.sleep_hours === "number") {
+      sleepValues.push(Number(lifestyle.sleep_hours));
+    }
+    if (typeof lifestyle?.stress_level === "number") {
+      stressValues.push(Number(lifestyle.stress_level));
+    }
   }
 
   const averageFeeling = checkins.length
@@ -202,6 +212,12 @@ export function summarizeCheckinTrends(checkins: DailyCheckinRecord[]) {
 
   return {
     averageFeeling,
+    averageSleepHours: sleepValues.length
+      ? Number((sleepValues.reduce((sum, value) => sum + value, 0) / sleepValues.length).toFixed(1))
+      : null,
+    averageStressLevel: stressValues.length
+      ? Number((stressValues.reduce((sum, value) => sum + value, 0) / stressValues.length).toFixed(1))
+      : null,
     symptomFrequency: Array.from(symptomCounts.values()).sort((a, b) => b.count - a.count).slice(0, 5),
     recentFoods: Array.from(foodCounts.values()).sort((a, b) => b.count - a.count).slice(0, 5),
   };
@@ -277,4 +293,21 @@ export async function fetchProviderPatientHealthDetail(
 
 export function toDateKey(date: Date) {
   return date.toISOString().slice(0, 10);
+}
+
+export async function getRecipeRelevantSignals(
+  supabase: SupabaseClient,
+  userId: string
+) {
+  const recentCheckins = await getUserRecentCheckins(supabase, userId, 14);
+  const trends = summarizeCheckinTrends(recentCheckins);
+
+  return {
+    recentCheckinCount: recentCheckins.length,
+    commonSymptoms: trends.symptomFrequency.map((item) => item.name),
+    commonFoods: trends.recentFoods.map((item) => item.name),
+    averageFeeling: trends.averageFeeling,
+    averageSleepHours: trends.averageSleepHours,
+    averageStressLevel: trends.averageStressLevel,
+  };
 }

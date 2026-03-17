@@ -5,6 +5,7 @@ import ReplyComposer from "../ReplyComposer";
 import { fetchCommunityPostById, fetchCommunityReplies } from "@/lib/community";
 import { getCurrentUserWithRole } from "@/lib/auth/session";
 import { fetchPatientByUserId } from "@/lib/carebridge/patients";
+import { fetchProviderByUserId, isProviderVerified } from "@/lib/carebridge/providers";
 
 type CommunityThreadPageProps = {
   params: Promise<{ id: string }>;
@@ -23,8 +24,12 @@ export default async function CommunityThreadPage({ params }: CommunityThreadPag
 
   const author = Array.isArray(post.profiles) ? (post.profiles[0] ?? null) : post.profiles;
   const canReply = Boolean(session.user);
-  const canMarkOfficial = session.role === "provider";
+  const providerAccount = session.user && session.role === "provider" ? await fetchProviderByUserId(supabase, session.user.id) : null;
+  const canMarkOfficial = Boolean(providerAccount && isProviderVerified(providerAccount));
   const patient = session.user ? await fetchPatientByUserId(supabase, session.user.id) : null;
+  const providerReplyHelper = session.role === "provider" && !canMarkOfficial
+    ? "Verified provider responses activate after your provider application is approved."
+    : null;
 
   return (
     <main className="shell space-y-8 py-6 sm:space-y-10 sm:py-10">
@@ -61,7 +66,7 @@ export default async function CommunityThreadPage({ params }: CommunityThreadPag
             replies.map((reply) => {
               const replyAuthor = Array.isArray(reply.profiles) ? (reply.profiles[0] ?? null) : reply.profiles;
               const provider = Array.isArray(reply.providers) ? (reply.providers[0] ?? null) : reply.providers;
-              const isProviderResponse = reply.is_provider_response && provider;
+              const isProviderResponse = reply.is_provider_response && provider && provider.verification_status === "verified";
               const canBookProvider = Boolean(provider?.slug) && (!patient?.state || Boolean(provider?.states_served?.includes?.(patient.state)));
               const stateBlocked = Boolean(patient?.state && provider && !provider.states_served?.includes(patient.state));
 
@@ -79,7 +84,7 @@ export default async function CommunityThreadPage({ params }: CommunityThreadPag
                         {isProviderResponse ? (
                           <>
                             <div className="mt-1 text-sm leading-6 muted">
-                              {[provider.credentials, provider.specialty].filter(Boolean).join(" · ")}
+                              {[provider.credentials, provider.specialty].filter(Boolean).join(" | ")}
                             </div>
                             <div className="mt-3 inline-flex rounded-full bg-white/80 px-3 py-1 text-xs font-semibold text-[var(--accent-strong)]">
                               {reply.verified_at ? "Verified Provider Response" : "Provider Response"}
@@ -136,7 +141,7 @@ export default async function CommunityThreadPage({ params }: CommunityThreadPag
             </p>
             <div className="mt-5">
               {canReply ? (
-                <ReplyComposer postId={post.id} canMarkOfficial={canMarkOfficial} />
+                <ReplyComposer postId={post.id} canMarkOfficial={canMarkOfficial} helperMessage={providerReplyHelper} />
               ) : (
                 <div className="space-y-4">
                   <div className="rounded-[22px] border border-[var(--border)] bg-white/72 px-4 py-4 text-sm muted">

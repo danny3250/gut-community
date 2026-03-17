@@ -1,9 +1,14 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
-import { getUserRecentCheckins, summarizeCheckinTrends } from "@/lib/carebridge/health";
+import { getRecipeRelevantSignals, getUserRecentCheckins, summarizeCheckinTrends } from "@/lib/carebridge/checkins";
 
-export default async function PortalHealthPage() {
+type PortalHealthPageProps = {
+  searchParams: Promise<{ saved?: string }>;
+};
+
+export default async function PortalHealthPage({ searchParams }: PortalHealthPageProps) {
+  const resolvedSearchParams = await searchParams;
   const supabase = await createClient();
   const {
     data: { user },
@@ -11,7 +16,10 @@ export default async function PortalHealthPage() {
 
   if (!user) redirect("/login");
 
-  const checkins = await getUserRecentCheckins(supabase, user.id, 14);
+  const [checkins, recipeSignals] = await Promise.all([
+    getUserRecentCheckins(supabase, user.id, 14),
+    getRecipeRelevantSignals(supabase, user.id),
+  ]);
   const trends = summarizeCheckinTrends(checkins);
 
   return (
@@ -20,7 +28,7 @@ export default async function PortalHealthPage() {
         <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
           <div>
             <span className="eyebrow">Health history</span>
-            <h1 className="mt-4 text-3xl font-semibold">Track how you’ve been feeling over time.</h1>
+            <h1 className="mt-4 text-3xl font-semibold">Track how you've been feeling over time.</h1>
             <p className="mt-3 max-w-2xl text-sm leading-6 muted">
               Daily check-ins give you a simple record of symptoms, foods, sleep, and stress that can support future telehealth visits and recipe recommendations.
             </p>
@@ -29,12 +37,31 @@ export default async function PortalHealthPage() {
             Daily check-in
           </Link>
         </div>
+        {resolvedSearchParams.saved === "1" ? (
+          <div className="mt-4 rounded-2xl border border-[var(--border)] bg-white/70 p-3 text-sm">
+            Today's check-in has been saved.
+          </div>
+        ) : null}
+      </section>
+
+      <section className="grid gap-4 lg:grid-cols-4">
+        <TrendCard label="Recent average feeling" value={trends.averageFeeling ? `${trends.averageFeeling} / 5` : "No data yet"} />
+        <TrendCard label="Average sleep" value={trends.averageSleepHours ? `${trends.averageSleepHours} hrs` : "No data yet"} />
+        <TrendCard label="Average stress" value={trends.averageStressLevel ? `${trends.averageStressLevel} / 5` : "No data yet"} />
+        <TrendCard label="Recent check-ins" value={`${recipeSignals.recentCheckinCount}`} />
       </section>
 
       <section className="grid gap-4 lg:grid-cols-3">
-        <TrendCard label="Recent average feeling" value={trends.averageFeeling ? `${trends.averageFeeling} / 5` : "No data yet"} />
         <TrendList title="Most common symptoms" items={trends.symptomFrequency.map((item) => `${item.name} (${item.count})`)} emptyText="No symptoms logged yet." />
         <TrendList title="Recently logged foods" items={trends.recentFoods.map((item) => `${item.name} (${item.count})`)} emptyText="No foods logged yet." />
+        <TrendList
+          title="Recipe signals"
+          items={[
+            ...recipeSignals.commonSymptoms.map((item) => `Symptom: ${item}`),
+            ...recipeSignals.commonFoods.map((item) => `Food: ${item}`),
+          ].slice(0, 6)}
+          emptyText="Signals for future recipe recommendations will appear here."
+        />
       </section>
 
       <section className="panel px-6 py-6 sm:px-8">
@@ -42,9 +69,9 @@ export default async function PortalHealthPage() {
         <div className="mt-5 grid gap-4">
           {checkins.length === 0 ? (
             <div className="rounded-[24px] border border-[var(--border)] bg-white/72 px-5 py-5">
-              <h3 className="text-lg font-semibold">No check-ins yet.</h3>
+              <h3 className="text-lg font-semibold">You haven't logged a check-in yet.</h3>
               <p className="mt-2 text-sm leading-6 muted">
-                Start with one quick daily check-in so your health history has a useful foundation.
+                Your recent health check-ins will appear here once you start tracking them.
               </p>
             </div>
           ) : (
@@ -58,7 +85,7 @@ export default async function PortalHealthPage() {
                       <div className="mt-1 text-sm muted">Overall feeling: {checkin.overall_feeling} / 5</div>
                     </div>
                     <div className="text-sm muted">
-                      Sleep: {lifestyle?.sleep_hours ?? "—"} hrs · Stress: {lifestyle?.stress_level ?? "—"} / 5
+                      Sleep: {lifestyle?.sleep_hours ?? "-"} hrs | Stress: {lifestyle?.stress_level ?? "-"} / 5
                     </div>
                   </div>
                   <div className="mt-4 grid gap-3 lg:grid-cols-2">

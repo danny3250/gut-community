@@ -13,6 +13,11 @@ const quickActions = [
     href: "/providers",
   },
   {
+    title: "Recipes",
+    description: "See recipe suggestions shaped by your recent check-ins and browse the full recipe library.",
+    href: "/portal/recipes",
+  },
+  {
     title: "Messages",
     description: "Keep communication, reminders, and follow-ups in one private place.",
     href: "/portal/messages",
@@ -42,6 +47,9 @@ export default async function PortalDashboardPage() {
             <Link href="/portal/check-in" className="btn-primary">
               Daily check-in
             </Link>
+            <Link href="/portal/recipes" className="btn-secondary">
+              Recommended recipes
+            </Link>
             <Link href="/portal/appointments" className="btn-primary">
               View appointments
             </Link>
@@ -54,6 +62,7 @@ export default async function PortalDashboardPage() {
         <div className="panel-strong grid gap-4 px-5 py-5 sm:grid-cols-2">
           <MiniCard title="Upcoming visits" body="Telehealth and follow-up appointments in one timeline." />
           <MiniCard title="Daily health check" body="Track symptoms, foods, sleep, and stress without a long form." />
+          <MiniCard title="Recipe support" body="Use recent check-ins to surface practical meal ideas that feel easier to act on." />
           <MiniCard title="Intake ready" body="Complete forms before visits to reduce check-in friction." />
           <MiniCard title="Resources" body="Return to trustworthy educational content and supportive wellness tools." />
         </div>

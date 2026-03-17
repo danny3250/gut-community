@@ -2,9 +2,14 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import CheckInForm from "./CheckInForm";
-import { fetchHealthOptions, fetchTodayCheckinByUserId } from "@/lib/carebridge/health";
+import { fetchHealthOptions, getTodaysCheckin } from "@/lib/carebridge/checkins";
 
-export default async function PortalCheckInPage() {
+type PortalCheckInPageProps = {
+  searchParams: Promise<{ edit?: string }>;
+};
+
+export default async function PortalCheckInPage({ searchParams }: PortalCheckInPageProps) {
+  const resolvedSearchParams = await searchParams;
   const supabase = await createClient();
   const {
     data: { user },
@@ -13,36 +18,37 @@ export default async function PortalCheckInPage() {
   if (!user) redirect("/login");
 
   const [todayCheckin, options] = await Promise.all([
-    fetchTodayCheckinByUserId(supabase, user.id),
+    getTodaysCheckin(supabase, user.id),
     fetchHealthOptions(supabase),
   ]);
 
-  if (todayCheckin) {
+  if (todayCheckin && resolvedSearchParams.edit !== "1") {
+    const lifestyle = Array.isArray(todayCheckin.lifestyle_metrics)
+      ? todayCheckin.lifestyle_metrics[0] ?? null
+      : todayCheckin.lifestyle_metrics ?? null;
+
     return (
       <main className="grid gap-5">
         <section className="panel px-6 py-6 sm:px-8">
-          <span className="eyebrow">Today’s check-in</span>
-          <h1 className="mt-4 text-3xl font-semibold">You’ve already checked in today.</h1>
+          <span className="eyebrow">Today's check-in</span>
+          <h1 className="mt-4 text-3xl font-semibold">You've already checked in today.</h1>
           <p className="mt-3 max-w-2xl text-sm leading-6 muted">
-            Today’s summary is saved and ready for you or your provider to review later.
+            Today's summary is saved and ready for you or your provider to review later.
           </p>
-          <div className="mt-6 grid gap-3 sm:grid-cols-3">
+
+          <div className="mt-6 grid gap-3 sm:grid-cols-4">
             <SummaryCard label="Overall feeling" value={`${todayCheckin.overall_feeling} / 5`} />
-            <SummaryCard
-              label="Symptoms logged"
-              value={`${todayCheckin.checkin_symptoms?.length ?? 0}`}
-            />
-            <SummaryCard
-              label="Foods logged"
-              value={`${todayCheckin.checkin_foods?.length ?? 0}`}
-            />
+            <SummaryCard label="Symptoms logged" value={`${todayCheckin.checkin_symptoms?.length ?? 0}`} />
+            <SummaryCard label="Foods logged" value={`${todayCheckin.checkin_foods?.length ?? 0}`} />
+            <SummaryCard label="Stress level" value={lifestyle?.stress_level ? `${lifestyle.stress_level} / 5` : "Not logged"} />
           </div>
+
           <div className="mt-6 flex flex-wrap gap-3">
-            <Link href="/portal/health" className="btn-primary">
-              View health history
+            <Link href="/portal/check-in?edit=1" className="btn-primary">
+              Edit today's check-in
             </Link>
-            <Link href="/portal" className="btn-secondary">
-              Return to dashboard
+            <Link href="/portal/health" className="btn-secondary">
+              View health history
             </Link>
           </div>
         </section>
@@ -50,7 +56,13 @@ export default async function PortalCheckInPage() {
     );
   }
 
-  return <CheckInForm symptomOptions={options.symptoms} foodOptions={options.foods} />;
+  return (
+    <CheckInForm
+      symptomOptions={options.symptoms}
+      foodOptions={options.foods}
+      initialCheckin={todayCheckin}
+    />
+  );
 }
 
 function SummaryCard({ label, value }: { label: string; value: string }) {

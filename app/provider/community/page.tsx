@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
 import { fetchCommunityPosts } from "@/lib/community";
-import { fetchProviderByUserId } from "@/lib/carebridge/providers";
+import { fetchProviderByUserId, getProviderVerificationMessage, isProviderVerified } from "@/lib/carebridge/providers";
 
 type ProviderCommunityPageProps = {
   searchParams: Promise<{ topic?: string }>;
@@ -41,6 +41,7 @@ export default async function ProviderCommunityPage({ searchParams }: ProviderCo
 
   const visiblePosts = (selectedTopic ? posts.filter((post) => post.topic === selectedTopic) : posts).slice(0, 20);
   const topics = Array.from(new Set(posts.map((post) => post.topic).filter(Boolean))).sort();
+  const verified = isProviderVerified(provider);
 
   return (
     <section className="grid gap-5">
@@ -54,6 +55,11 @@ export default async function ProviderCommunityPage({ searchParams }: ProviderCo
         {provider ? (
           <div className="mt-5 rounded-[24px] border border-[var(--border)] bg-white/72 px-4 py-4 text-sm muted">
             Matching against {provider.specialty ?? "your specialty"} and {provider.areas_of_care?.length ?? 0} care areas.
+          </div>
+        ) : null}
+        {!verified ? (
+          <div className="mt-4 rounded-[24px] border border-[var(--border)] bg-white/72 px-4 py-4 text-sm muted">
+            {getProviderVerificationMessage(provider)}
           </div>
         ) : null}
       </section>
@@ -119,7 +125,7 @@ export default async function ProviderCommunityPage({ searchParams }: ProviderCo
                     </div>
                     <div className="flex items-center">
                       <Link href={`/community/${post.id}`} className="btn-primary px-4 py-2 text-sm">
-                        Answer question
+                        {verified ? "Answer question" : "View question"}
                       </Link>
                     </div>
                   </div>

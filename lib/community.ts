@@ -12,6 +12,7 @@ export type CommunityProvider = {
   credentials: string | null;
   specialty: string | null;
   states_served: string[] | null;
+  verification_status: string | null;
 };
 
 export type CommunityPostRecord = {
@@ -91,7 +92,7 @@ export async function fetchCommunityReplies(supabase: SupabaseClient, postId: st
   const { data, error } = await supabase
     .from("community_replies")
     .select(
-      "id,post_id,author_user_id,body,is_provider_response,provider_id,verified_at,created_at,updated_at,profiles!community_replies_author_user_id_fkey(display_name,role),providers(id,slug,display_name,credentials,specialty,states_served)"
+      "id,post_id,author_user_id,body,is_provider_response,provider_id,verified_at,created_at,updated_at,profiles!community_replies_author_user_id_fkey(display_name,role),providers(id,slug,display_name,credentials,specialty,states_served,verification_status)"
     )
     .eq("post_id", postId)
     .order("created_at", { ascending: true });

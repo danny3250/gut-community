@@ -3,7 +3,12 @@ import { notFound } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { fetchPatientByUserId } from "@/lib/carebridge/patients";
 import { getProviderCalendar } from "@/lib/carebridge/scheduling";
-import { fetchProviderAvailability, fetchProviderBySlug } from "@/lib/carebridge/providers";
+import {
+  canProviderAcceptBookings,
+  fetchProviderAvailability,
+  fetchProviderBySlug,
+  isProviderVerified,
+} from "@/lib/carebridge/providers";
 import BookingPanel from "../BookingPanel";
 
 type ProviderProfilePageProps = {
@@ -25,10 +30,15 @@ export default async function ProviderProfilePage({ params }: ProviderProfilePag
 
   const patient = user ? await fetchPatientByUserId(supabase, user.id) : null;
   const isPatientStateEligible = !patient?.state || provider.states_served.includes(patient.state);
-  const canBook = Boolean(user) && isPatientStateEligible;
-  const eligibilityMessage = patient?.state && !isPatientStateEligible
-    ? "This provider is not currently licensed to provide telehealth visits in your state."
-    : null;
+  const isBookableProvider = canProviderAcceptBookings(provider);
+  const canBook = Boolean(user) && isBookableProvider && isPatientStateEligible;
+  const eligibilityMessage = !isProviderVerified(provider)
+    ? "This provider is not currently available for booking."
+    : !provider.is_accepting_patients
+      ? "This provider is not accepting new patients right now."
+      : patient?.state && !isPatientStateEligible
+        ? "This provider is not currently licensed to provide telehealth visits in your state."
+        : null;
 
   const [availability, calendarDays] = await Promise.all([
     fetchProviderAvailability(supabase, provider.id),
@@ -59,7 +69,7 @@ export default async function ProviderProfilePage({ params }: ProviderProfilePag
           <div>
             <h1 className="text-4xl font-semibold">{provider.display_name}</h1>
             <p className="mt-2 text-base leading-7 muted">
-              {[provider.credentials, provider.specialty].filter(Boolean).join(" · ")}
+              {[provider.credentials, provider.specialty].filter(Boolean).join(" | ")}
             </p>
           </div>
 
