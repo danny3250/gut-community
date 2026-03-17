@@ -54,6 +54,9 @@ export default async function HomePage() {
             <Link href="/providers" className="btn-primary">
               Find a provider
             </Link>
+            <Link href="/recipes" className="btn-secondary">
+              Browse public recipes
+            </Link>
             <Link href={user ? "/portal" : "/signup"} className="btn-secondary">
               {user ? "Open patient portal" : "Get started"}
             </Link>
@@ -68,20 +71,20 @@ export default async function HomePage() {
         <div className="panel-strong grid gap-4 px-6 py-6">
           <div className="rounded-[24px] border border-[var(--border)] bg-[var(--accent-soft)]/45 px-5 py-5">
             <div className="text-xs font-semibold uppercase tracking-[0.18em] text-[var(--accent-strong)]">
-              Telehealth convenience
+              Telehealth-ready care
             </div>
-            <div className="mt-3 text-2xl font-semibold">Care without the usual commute burden.</div>
+            <div className="mt-3 text-2xl font-semibold">Care without the usual travel burden.</div>
             <p className="mt-2 text-sm leading-6 muted">
-              The platform is being structured for appointment-based remote visits, waiting room flows, and secure provider launch paths.
+              Scheduling, preparation, messaging, and remote-visit workflows are designed to feel clear before the visit even starts.
             </p>
           </div>
           <div className="rounded-[24px] border border-[var(--border)] bg-white/78 px-5 py-5">
             <div className="text-xs font-semibold uppercase tracking-[0.18em] text-[var(--accent-strong)]">
-              Public and private
+              Public and private by design
             </div>
-            <div className="mt-3 text-2xl font-semibold">Resources publicly, workflows privately.</div>
+            <div className="mt-3 text-2xl font-semibold">Browse openly. Manage care privately.</div>
             <p className="mt-2 text-sm leading-6 muted">
-              CareBridge keeps educational content and supportive materials open while protecting patient, provider, and admin workflows behind role-based access.
+              Public resources, recipes, and provider discovery stay easy to browse, while personal care workflows stay protected behind secure access.
             </p>
           </div>
         </div>

@@ -37,8 +37,8 @@ export default function CareWorkspaceShell({
       <div className="absolute inset-x-0 top-0 -z-10 h-[360px] bg-[radial-gradient(circle_at_top,_rgba(255,255,255,0.85),_transparent_72%)]" />
       <div className="shell py-5 sm:py-6">
         <div className="grid gap-6 lg:grid-cols-[280px_minmax(0,1fr)]">
-          <aside className="panel h-fit px-5 py-5">
-            <Link href="/" className="block rounded-[24px] bg-white/72 px-4 py-4">
+          <aside className="h-fit rounded-[30px] border border-[var(--border)] bg-[rgba(255,252,246,0.9)] px-5 py-5 shadow-[0_22px_46px_rgba(97,84,58,0.08)]">
+            <Link href="/" className="block rounded-[24px] border border-[var(--border)] bg-white/72 px-4 py-4">
               <div className="text-xs font-semibold uppercase tracking-[0.22em] text-[var(--accent-strong)]">
                 {areaLabel}
               </div>
@@ -46,7 +46,12 @@ export default function CareWorkspaceShell({
               <div className="mt-1 text-sm muted">{BRAND.tagline}</div>
             </Link>
 
-            <div className="mt-6 space-y-2">
+            <div className="mt-6">
+              <div className="px-1 text-xs font-semibold uppercase tracking-[0.18em] text-[var(--accent-strong)]">
+                Workspace navigation
+              </div>
+            </div>
+            <div className="mt-3 space-y-2">
               {primaryLinks.map((link) => {
                 const active = pathname === link.href;
                 return (
@@ -81,7 +86,7 @@ export default function CareWorkspaceShell({
             {secondaryLinks.length > 0 ? (
               <div className="mt-8 border-t border-[var(--border)] pt-5">
                 <div className="text-xs font-semibold uppercase tracking-[0.18em] text-[var(--accent-strong)]">
-                  Shared resources
+                  Public resources
                 </div>
                 <div className="mt-3 space-y-2">
                   {secondaryLinks.map((link) => (
@@ -95,16 +100,38 @@ export default function CareWorkspaceShell({
           </aside>
 
           <div className="space-y-5">
-            <header className="panel flex flex-col gap-4 px-5 py-4 sm:flex-row sm:items-center sm:justify-between sm:px-6">
-              <div>
-                <div className="text-sm font-semibold uppercase tracking-[0.18em] text-[var(--accent-strong)]">
-                  {title}
+            <header className="rounded-[30px] border border-[var(--border)] bg-[rgba(255,252,246,0.9)] px-5 py-6 shadow-[0_22px_46px_rgba(97,84,58,0.08)] sm:px-6">
+              <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+                <div>
+                  <div className="text-xs font-semibold uppercase tracking-[0.18em] text-[var(--accent-strong)]">
+                    {areaLabel}
+                  </div>
+                  <div className="mt-3 text-3xl font-semibold tracking-[-0.02em] text-[var(--foreground)]">{title}</div>
+                  <div className="mt-2 max-w-2xl text-sm leading-6 muted">{description}</div>
                 </div>
-                <div className="mt-1 text-sm muted">{description}</div>
+                <div className="flex flex-wrap items-center gap-3">
+                  {email ? <span className="rounded-full bg-white/70 px-4 py-2 text-sm muted">{email}</span> : null}
+                  <SignOutButton />
+                </div>
               </div>
-              <div className="flex flex-wrap items-center gap-3">
-                {email ? <span className="rounded-full bg-white/70 px-4 py-2 text-sm muted">{email}</span> : null}
-                <SignOutButton />
+
+              <div className="mt-5 flex flex-wrap gap-2">
+                {primaryLinks.map((link) => {
+                  const active = pathname === link.href;
+                  return (
+                    <Link
+                      key={`header-${link.href}`}
+                      href={link.href}
+                      className={
+                        active
+                          ? "rounded-full bg-[var(--accent)] px-4 py-2 text-sm font-semibold text-white"
+                          : "rounded-full border border-[var(--border)] bg-white/70 px-4 py-2 text-sm text-[rgba(43,36,28,0.82)]"
+                      }
+                    >
+                      {link.label}
+                    </Link>
+                  );
+                })}
               </div>
             </header>
 

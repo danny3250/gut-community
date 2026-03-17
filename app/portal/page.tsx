@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { getCurrentUserWithRole } from "@/lib/auth/session";
+import { getRecommendedRecipesForUser } from "@/lib/carebridge/recommendations";
 
 const quickActions = [
   {
@@ -30,8 +31,9 @@ const quickActions = [
 ];
 
 export default async function PortalDashboardPage() {
-  const { displayName } = await getCurrentUserWithRole();
+  const { displayName, user } = await getCurrentUserWithRole();
   const firstName = displayName?.split(" ")[0] || "there";
+  const recommendedRecipes = user ? await getRecommendedRecipesForUser(user.id, 3) : [];
 
   return (
     <>
@@ -77,6 +79,52 @@ export default async function PortalDashboardPage() {
         ))}
       </section>
 
+      <section className="panel px-6 py-6 sm:px-8">
+        <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+          <div>
+            <span className="eyebrow">Recommended for You</span>
+            <h2 className="mt-3 text-2xl font-semibold">Recipes shaped by your health signals.</h2>
+            <p className="mt-2 max-w-2xl text-sm leading-6 muted">
+              These suggestions use recent check-ins and visit guidance to surface practical meal ideas without extra busywork.
+            </p>
+          </div>
+          <Link href="/portal/recipes" className="btn-secondary">
+            View all recommendations
+          </Link>
+        </div>
+
+        <div className="mt-5 grid gap-4 lg:grid-cols-3">
+          {recommendedRecipes.length === 0 ? (
+            <div className="rounded-[24px] border border-[var(--border)] bg-white/72 px-5 py-5 lg:col-span-3">
+              <h3 className="text-lg font-semibold">Start logging your daily health to get personalized recommendations.</h3>
+              <p className="mt-2 text-sm leading-6 muted">
+                As CareBridge learns from your check-ins and visit guidance, this section will suggest recipes that better fit your needs.
+              </p>
+            </div>
+          ) : (
+            recommendedRecipes.map((recipe) => (
+              <Link key={recipe.id} href={`/recipes/${recipe.slug}`} className="rounded-[24px] border border-[var(--border)] bg-white/72 px-5 py-5 hover:-translate-y-0.5">
+                <div className="rounded-full bg-[var(--accent-soft)] px-3 py-1 text-xs font-semibold text-[var(--accent-strong)]">
+                  {recipe.recommendation_reason}
+                </div>
+                <div className="mt-3 text-xl font-semibold">{recipe.title}</div>
+                {recipe.summary ? <p className="mt-2 text-sm leading-6 muted">{recipe.summary}</p> : null}
+                {recipe.tags.length > 0 ? (
+                  <div className="mt-3 flex flex-wrap gap-2">
+                    {recipe.tags.slice(0, 3).map((tag) => (
+                      <span key={tag} className="rounded-full border border-[var(--border)] px-3 py-1 text-xs">
+                        {formatFacet(tag)}
+                      </span>
+                    ))}
+                  </div>
+                ) : null}
+                {recipe.why_this_helps ? <p className="mt-3 text-sm leading-6 muted">{recipe.why_this_helps}</p> : null}
+              </Link>
+            ))
+          )}
+        </div>
+      </section>
+
       <section className="grid gap-4 lg:grid-cols-[1.05fr_0.95fr]">
         <div className="panel px-6 py-6">
           <h2 className="text-2xl font-semibold">What CareBridge is building toward</h2>
@@ -97,6 +145,14 @@ export default async function PortalDashboardPage() {
       </section>
     </>
   );
+}
+
+function formatFacet(value: string) {
+  return value
+    .split(/[-_]/g)
+    .filter(Boolean)
+    .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
+    .join(" ");
 }
 
 function MiniCard({ title, body }: { title: string; body: string }) {

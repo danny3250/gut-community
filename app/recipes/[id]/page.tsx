@@ -194,7 +194,7 @@ export default async function RecipeDetailPage({
         <div className="panel px-5 py-4">
           <div className="font-medium">Draft recipe</div>
           <div className="mt-1 text-sm muted">
-            This recipe is still private. Review the structure and publish when it reads cleanly.
+            This recipe is still private. Review the details and publish when it is ready for patients to browse.
           </div>
           <div className="mt-3 flex flex-wrap gap-2">
             <Link className="btn-secondary px-4 py-2 text-sm" href={`/recipes/${recipe.id}/edit`}>
@@ -212,8 +212,8 @@ export default async function RecipeDetailPage({
           // eslint-disable-next-line @next/next/no-img-element
           <img src={imageUrl} alt={recipe.title} className="max-h-[340px] w-full object-cover" />
         ) : (
-          <div className="flex h-[180px] w-full items-center justify-center bg-[var(--warm)]/40 text-sm opacity-60">
-            Photo coming soon
+          <div className="flex h-[180px] w-full items-center justify-center bg-[var(--warm)]/40 px-6 text-center text-sm leading-6 opacity-70">
+            Recipe photo unavailable. Ingredients, instructions, and care guidance are still available below.
           </div>
         )}
 
@@ -254,6 +254,12 @@ export default async function RecipeDetailPage({
             <div className="pt-1">
               <Link className="text-sm font-semibold text-[var(--accent-strong)]" href={`/recipes/${recipe.id}/edit`}>
                 Edit recipe details
+              </Link>
+            </div>
+          ) : recipe.status === "published" && !user ? (
+            <div className="pt-1">
+              <Link className="text-sm font-semibold text-[var(--accent-strong)]" href="/login">
+                Sign in to save this recipe
               </Link>
             </div>
           ) : null}

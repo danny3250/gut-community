@@ -1,10 +1,10 @@
 import Link from "next/link";
 
 const services = [
-  { title: "Provider discovery", body: "Search for providers, specialties, and telehealth availability." },
-  { title: "Scheduling foundation", body: "Request or book visits with status, timezone, and appointment-type support." },
-  { title: "Telehealth workflow", body: "Prepare for remote visits with waiting room, launch, and follow-up support." },
-  { title: "Patient support tools", body: "Use resources, forms, messaging, community, and wellness-support content in one platform." },
+  { title: "Provider discovery", body: "Search by specialty, state served, and telehealth availability to find a good next step." },
+  { title: "Scheduling and reminders", body: "Book visits, review appointment details, and stay on track with practical in-app reminders." },
+  { title: "Telehealth preparation", body: "Handle pre-visit forms, documents, join timing, and remote visit access in one connected flow." },
+  { title: "Support between visits", body: "Use messaging, resources, recipes, and daily health tracking to stay connected to care over time." },
 ];
 
 export default function ServicesPage() {
@@ -12,9 +12,9 @@ export default function ServicesPage() {
     <main className="shell space-y-8 py-6 sm:space-y-10 sm:py-10">
       <section className="panel px-6 py-8 sm:px-8">
         <span className="eyebrow">Services</span>
-        <h1 className="mt-4 text-4xl font-semibold">Tools for reaching care, preparing for visits, and staying connected.</h1>
+        <h1 className="mt-4 text-4xl font-semibold">Tools for finding care, preparing well, and staying connected.</h1>
         <p className="mt-3 max-w-2xl text-base leading-7 muted">
-          CareBridge combines care access, patient support, provider workflows, and telehealth-ready foundations in one platform.
+          CareBridge brings together the practical pieces around care access so patients and providers can spend less energy chasing logistics.
         </p>
       </section>
       <section className="grid gap-4 lg:grid-cols-2">

@@ -28,7 +28,7 @@ export default async function SignupPage({
           <p className="mt-4 text-sm leading-6 muted">
             {requestedRole === "provider"
               ? "Create your account to complete provider onboarding, submit your credentials for review, and unlock public listing only after verification."
-              : "Create an account to access the patient portal, save helpful resources, prepare for appointments, and stay connected to care over time."}
+              : "Create an account to access your patient portal, save helpful resources, prepare for appointments, and stay connected to care over time."}
           </p>
           <div className="mt-8 space-y-3 text-sm leading-6 muted">
             <p>Public resources stay open, while protected patient, provider, and admin workflows stay role-gated.</p>

@@ -1,7 +1,8 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
-import { formatRecipeFacetLabel, getRecommendedRecipesForUser } from "@/lib/carebridge/recipes";
+import { formatRecipeFacetLabel } from "@/lib/carebridge/recipes";
+import { getRecommendedRecipesForUser } from "@/lib/carebridge/recommendations";
 
 function formatMinutes(value: number | null) {
   if (value == null) return null;
@@ -16,7 +17,7 @@ export default async function PortalRecipesPage() {
 
   if (!user) redirect("/login");
 
-  const recommendedRecipes = await getRecommendedRecipesForUser(supabase, user.id, 6);
+  const recommendedRecipes = await getRecommendedRecipesForUser(user.id, 6);
 
   return (
     <main className="grid gap-5">
@@ -26,7 +27,7 @@ export default async function PortalRecipesPage() {
             <span className="eyebrow">Recipes</span>
             <h1 className="mt-4 text-3xl font-semibold">Recommended recipes shaped by your recent check-ins.</h1>
             <p className="mt-3 max-w-2xl text-sm leading-6 muted">
-              This section uses the foods and symptom patterns you have been tracking to highlight supportive meal ideas. It is a practical starting point, not medical advice.
+              This section blends recent check-ins with visit guidance when available to highlight supportive meal ideas. It is a practical starting point, not medical advice.
             </p>
           </div>
           <Link href="/recipes" className="btn-secondary">
@@ -39,7 +40,7 @@ export default async function PortalRecipesPage() {
         <section className="panel px-6 py-6 sm:px-8">
           <h2 className="text-xl font-semibold">No recommendations yet.</h2>
           <p className="mt-2 max-w-2xl text-sm leading-6 muted">
-            Complete more daily check-ins to give this section enough signal to personalize recipe suggestions.
+            Start logging your daily health to get personalized recommendations, or give CareBridge a little more time to learn from your care history.
           </p>
           <div className="mt-5 flex flex-wrap gap-3">
             <Link href="/portal/check-in" className="btn-primary">

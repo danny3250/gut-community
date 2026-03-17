@@ -22,7 +22,7 @@ export default async function LoginPage({
           <span className="eyebrow">CareBridge access</span>
           <h1 className="mt-4 text-4xl font-semibold">Sign in to your account</h1>
           <p className="mt-4 text-sm leading-6 muted">
-            Return to your portal, provider workspace, or admin area without having to start from zero.
+            Return to your portal, provider workspace, or admin tools to manage the next step in care.
           </p>
           <div className="mt-8 rounded-[24px] bg-[var(--warm)]/60 p-5 text-sm leading-6 muted">
             {BRAND.name} keeps care access, messaging, forms, resources, and telehealth-ready workflows connected

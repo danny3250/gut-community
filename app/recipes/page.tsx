@@ -216,9 +216,9 @@ export default function RecipesPage() {
       <section className="panel flex flex-col gap-6 px-6 py-8 sm:px-8 lg:flex-row lg:items-end lg:justify-between">
         <div className="max-w-3xl">
           <span className="eyebrow">Recipes</span>
-          <h1 className="mt-4 text-4xl font-semibold">Supportive meal ideas that stay easy to scan and easy to revisit.</h1>
+          <h1 className="mt-4 text-4xl font-semibold">Browse supportive recipes without needing an account.</h1>
           <p className="mt-3 text-sm leading-6 muted sm:text-base">
-            Browse public recipes, filter by condition and food triggers, and use your recent daily check-ins for lighter-touch personalization.
+            Explore public recipes by condition, tags, and ingredient triggers. Sign in when you want to save favorites or receive more personalized suggestions.
           </p>
         </div>
 
@@ -229,16 +229,18 @@ export default function RecipesPage() {
                 Favorites
               </button>
               <Link className="btn-secondary" href="/portal/recipes">
-                Recommended recipes
-              </Link>
-              <Link className="btn-primary" href="/app/admin/recipes/new">
-                Add recipe
+                Personalized recipes
               </Link>
             </>
           ) : (
-            <Link className="btn-primary" href="/signup">
-              Join members
-            </Link>
+            <>
+              <Link className="btn-secondary" href="/login">
+                Sign in
+              </Link>
+              <Link className="btn-primary" href="/signup">
+                Create account
+              </Link>
+            </>
           )}
         </div>
       </section>
@@ -248,9 +250,9 @@ export default function RecipesPage() {
           <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
             <div>
               <span className="eyebrow">Recommended for you</span>
-              <h2 className="mt-3 text-2xl font-semibold">A lighter starting point based on recent check-ins.</h2>
+              <h2 className="mt-3 text-2xl font-semibold">A personalized starting point based on recent check-ins.</h2>
               <p className="mt-2 max-w-2xl text-sm leading-6 muted">
-                These suggestions are based on recent foods and symptom patterns you have been tracking. They are supportive meal ideas, not medical advice.
+                These suggestions reflect recent foods, symptom patterns, and care signals you have been tracking. They are supportive meal ideas, not medical advice.
               </p>
             </div>
             <Link href="/portal/recipes" className="btn-secondary">
@@ -289,6 +291,9 @@ export default function RecipesPage() {
       <section className="grid gap-4 lg:grid-cols-[1.1fr_0.9fr]">
         <div className="panel px-5 py-5 sm:px-6">
           <div className="text-sm font-semibold">Filter recipes</div>
+          <p className="mt-2 max-w-xl text-sm leading-6 muted">
+            Combine conditions, tags, and ingredient avoids to narrow the list. Recipes stay public to browse, while saved items and personalized suggestions stay inside your account.
+          </p>
           <div className="mt-4 space-y-5">
             <FilterGroup
               title="Conditions"
@@ -395,8 +400,8 @@ export default function RecipesPage() {
           </div>
 
           <div className="mt-4 space-y-3 text-sm leading-6 muted">
-            <p>Recipes stay public by default when they are published so people can browse without a login.</p>
-            <p>Filters are powered by denormalized recipe fields for faster reads while the normalized tables remain the source of truth.</p>
+            <p>Published recipes are available to browse publicly, so patients and families can explore options before they create an account.</p>
+            <p>Sign in to save recipes, revisit favorites, and open the personalized recipe experience inside your portal.</p>
           </div>
         </div>
       </section>
@@ -412,8 +417,8 @@ export default function RecipesPage() {
           </div>
           <p className="mt-2 text-sm leading-6 muted">
             {tab === "published"
-              ? "Try clearing one or two filters to widen the results."
-              : "Draft recipes will appear here as you build and review them."}
+              ? "Try clearing one or two filters to broaden the results."
+              : "Draft recipes will appear here as you build, review, and prepare them for publishing."}
           </p>
         </div>
       ) : (
@@ -564,7 +569,11 @@ function RecipeCard({
 
         {userId ? (
           <SaveToggle recipeId={recipe.id} userId={userId} isSaved={saved} onChanged={onFavoriteChanged} />
-        ) : null}
+        ) : (
+          <Link href="/login" className="rounded-full border border-[var(--border)] px-3 py-1.5 text-xs font-semibold text-[var(--accent-strong)]">
+            Sign in to save
+          </Link>
+        )}
       </div>
     </div>
   );

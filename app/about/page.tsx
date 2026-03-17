@@ -24,7 +24,7 @@ export default function AboutPage() {
           </div>
         </div>
         <div className="panel-strong px-6 py-6">
-          <div className="text-sm font-semibold uppercase tracking-[0.18em] text-[var(--accent-strong)]">Core direction</div>
+          <div className="text-sm font-semibold uppercase tracking-[0.18em] text-[var(--accent-strong)]">What guides the product</div>
           <ul className="mt-4 space-y-4 text-sm leading-6 muted">
             {principles.map((item) => <li key={item}>{item}</li>)}
           </ul>
