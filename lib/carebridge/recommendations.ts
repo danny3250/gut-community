@@ -33,8 +33,20 @@ const CONDITION_TAG_PREFERENCES: Record<string, string[]> = {
   anxiety: ["anti_inflammatory"],
 };
 
+function getOptionalAdminClient() {
+  try {
+    return createAdminClient();
+  } catch {
+    return null;
+  }
+}
+
 export async function getRecommendedRecipesForUser(userId: string, limit = 6) {
-  const supabase = createAdminClient();
+  const supabase = getOptionalAdminClient();
+  if (!supabase) {
+    return [] as PersonalizedRecommendedRecipe[];
+  }
+
   const [{ data: patient }, checkins, { data: conditions }, { data: ingredients }] = await Promise.all([
     supabase.from("patients").select("id").eq("user_id", userId).maybeSingle<{ id: string }>(),
     getUserRecentCheckins(supabase, userId, 14),
@@ -129,7 +141,11 @@ export async function getRecommendedRecipesForUser(userId: string, limit = 6) {
 }
 
 async function fetchRecentVisitNotes(patientId: string) {
-  const supabase = createAdminClient();
+  const supabase = getOptionalAdminClient();
+  if (!supabase) {
+    return [] as RecentNoteRow[];
+  }
+
   const { data, error } = await supabase
     .from("provider_visit_notes")
     .select("subject,note_body,structured_notes,updated_at")
