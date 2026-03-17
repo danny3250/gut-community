@@ -1,5 +1,6 @@
 import { notFound, redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
+import { fetchProviderVisitNoteForAppointment } from "@/lib/carebridge/provider-notes";
 import { fetchVisitWithContext } from "@/lib/carebridge/visits";
 import { Role } from "@/lib/auth/roles";
 import { TelehealthVisitService } from "@/services/telehealth/service";
@@ -52,6 +53,10 @@ export default async function VisitPage({ params }: VisitPageProps) {
     participantRole === "admin"
       ? visitContext
       : await service.enterVisit(visitId, participantRole === "provider" ? "provider" : "patient");
+  const providerNote =
+    provider?.id && appointment?.id
+      ? await fetchProviderVisitNoteForAppointment(supabase, provider.id, appointment.id)
+      : null;
 
   return (
     <main className="shell py-6 sm:py-10">
@@ -72,6 +77,9 @@ export default async function VisitPage({ params }: VisitPageProps) {
             : "Visit time"
         }
         startedAt={updatedVisit.started_at}
+        appointmentId={appointment?.id ?? null}
+        patientId={patient?.id ?? null}
+        initialNote={providerNote}
       />
     </main>
   );

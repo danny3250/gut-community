@@ -2,6 +2,7 @@ import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { getPatientCheckinSummaryForProvider } from "@/lib/carebridge/checkins";
+import { fetchRecentProviderNotesForPatient, getProviderVisitNotePreview } from "@/lib/carebridge/provider-notes";
 import { fetchProviderByUserId } from "@/lib/carebridge/providers";
 
 type ProviderPatientDetailPageProps = {
@@ -20,7 +21,10 @@ export default async function ProviderPatientDetailPage({ params }: ProviderPati
   const provider = await fetchProviderByUserId(supabase, user.id);
   if (!provider) redirect("/portal");
 
-  const detail = await getPatientCheckinSummaryForProvider(supabase, provider.id, id);
+  const [detail, recentNotes] = await Promise.all([
+    getPatientCheckinSummaryForProvider(supabase, provider.id, id),
+    fetchRecentProviderNotesForPatient(supabase, provider.id, id),
+  ]);
   if (!detail) notFound();
 
   return (
@@ -84,6 +88,50 @@ export default async function ProviderPatientDetailPage({ params }: ProviderPati
                     />
                   </div>
                   {checkin.notes ? <p className="mt-4 text-sm leading-6 muted">{checkin.notes}</p> : null}
+                </div>
+              );
+            })
+          )}
+        </div>
+      </section>
+
+      <section className="panel px-6 py-6 sm:px-8">
+        <h2 className="text-2xl font-semibold">Recent provider notes</h2>
+        <div className="mt-5 grid gap-4">
+          {recentNotes.length === 0 ? (
+            <div className="rounded-[24px] border border-[var(--border)] bg-white/72 px-5 py-5 text-sm muted">
+              No prior notes available for this patient.
+            </div>
+          ) : (
+            recentNotes.map((note) => {
+              const appointment = Array.isArray(note.appointments) ? note.appointments[0] ?? null : note.appointments ?? null;
+              return (
+                <div key={note.id} className="rounded-[24px] border border-[var(--border)] bg-white/72 px-5 py-5">
+                  <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+                    <div>
+                      <div className="text-lg font-semibold">{note.subject ?? "Visit note"}</div>
+                      <div className="mt-1 text-sm muted">
+                        {appointment
+                          ? new Intl.DateTimeFormat("en-US", {
+                              dateStyle: "medium",
+                              timeStyle: "short",
+                              timeZone: appointment.timezone,
+                            }).format(new Date(appointment.start_time))
+                          : "Appointment note"}
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-3">
+                      <span className="rounded-full border border-[var(--border)] px-3 py-1 text-xs capitalize">
+                        {note.status}
+                      </span>
+                      {appointment?.id ? (
+                        <Link href={`/provider/appointments/${appointment.id}`} className="btn-secondary px-4 py-2 text-sm">
+                          Open note context
+                        </Link>
+                      ) : null}
+                    </div>
+                  </div>
+                  <p className="mt-4 text-sm leading-6 muted">{getProviderVisitNotePreview(note.note_body)}</p>
                 </div>
               );
             })

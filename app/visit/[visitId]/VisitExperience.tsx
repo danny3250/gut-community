@@ -2,6 +2,8 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
+import ProviderVisitNoteEditor from "@/app/components/provider-notes/ProviderVisitNoteEditor";
+import type { ProviderVisitNoteRecord } from "@/lib/carebridge/types";
 
 type VisitExperienceProps = {
   visitId: string;
@@ -12,6 +14,9 @@ type VisitExperienceProps = {
   appointmentType: string;
   appointmentTime: string;
   startedAt: string | null;
+  appointmentId: string | null;
+  patientId: string | null;
+  initialNote: ProviderVisitNoteRecord | null;
 };
 
 export default function VisitExperience({
@@ -23,6 +28,9 @@ export default function VisitExperience({
   appointmentType,
   appointmentTime,
   startedAt,
+  appointmentId,
+  patientId,
+  initialNote,
 }: VisitExperienceProps) {
   const router = useRouter();
   const [status, setStatus] = useState(initialStatus);
@@ -99,7 +107,7 @@ export default function VisitExperience({
         </div>
       </section>
 
-      <section className="grid gap-5 lg:grid-cols-[1fr_320px]">
+      <section className="grid gap-5 lg:grid-cols-[1fr_360px]">
         <div className="panel flex min-h-[420px] flex-col items-center justify-center px-6 py-8 sm:px-8">
           <div className="text-sm font-semibold uppercase tracking-[0.18em] text-[var(--accent-strong)]">
             Video session
@@ -120,18 +128,19 @@ export default function VisitExperience({
             <div className="mt-3 text-sm leading-6 muted">
               {isWaiting
                 ? waitingMessage
-                : "Both participants are connected. TODO: attach secure notes, screen sharing, and Chime media components here."}
+                : "Both participants are connected. The note panel stays private to the provider and can be updated throughout the session."}
             </div>
           </div>
 
-          <div className="panel px-5 py-5">
-            <div className="text-sm font-semibold uppercase tracking-[0.18em] text-[var(--accent-strong)]">
-              Notes placeholder
-            </div>
-            <div className="mt-3 text-sm leading-6 muted">
-              TODO: add secure visit notes, file sharing, audit logging, and post-visit summary support after workflow review.
-            </div>
-          </div>
+          {participantRole === "provider" && appointmentId && patientId ? (
+            <ProviderVisitNoteEditor
+              appointmentId={appointmentId}
+              patientId={patientId}
+              visitId={visitId}
+              initialNote={initialNote}
+              compact
+            />
+          ) : null}
 
           {message ? <div className="panel px-5 py-4 text-sm">{message}</div> : null}
         </aside>

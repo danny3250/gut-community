@@ -59,3 +59,21 @@ export type AppointmentRecord = {
   visit_external_id: string | null;
   join_url_placeholder: string | null;
 };
+
+export type ProviderVisitNoteRecord = {
+  id: string;
+  appointment_id: string;
+  visit_id: string | null;
+  patient_id: string;
+  provider_id: string;
+  status: "draft" | "finalized" | string;
+  subject: string | null;
+  note_body: string;
+  structured_notes: Record<string, unknown>;
+  created_by_user_id: string | null;
+  last_edited_by_user_id: string | null;
+  version: number;
+  created_at: string;
+  updated_at: string;
+  finalized_at: string | null;
+};

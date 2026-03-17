@@ -4,6 +4,7 @@ import { createClient } from "@/lib/supabase/server";
 import AppointmentStatusBadge from "@/app/components/AppointmentStatusBadge";
 import AppointmentActionButton from "@/app/components/appointments/AppointmentActionButton";
 import AppointmentMessageButton from "@/app/components/messages/AppointmentMessageButton";
+import ProviderVisitNoteEditor from "@/app/components/provider-notes/ProviderVisitNoteEditor";
 import {
   fetchProviderAppointmentById,
   formatAppointmentDateTime,
@@ -17,6 +18,7 @@ import {
   getIntakeTemplate,
 } from "@/lib/carebridge/forms";
 import { getConversationIdForAppointment } from "@/lib/carebridge/messages";
+import { fetchProviderVisitNoteForAppointment } from "@/lib/carebridge/provider-notes";
 import { fetchProviderByUserId } from "@/lib/carebridge/providers";
 import LaunchVisitButton from "./LaunchVisitButton";
 
@@ -38,10 +40,11 @@ export default async function ProviderAppointmentDetailPage({
   const provider = await fetchProviderByUserId(supabase, user.id);
   if (!provider) redirect("/portal");
 
-  const [appointment, forms, documents] = await Promise.all([
+  const [appointment, forms, documents, note] = await Promise.all([
     fetchProviderAppointmentById(supabase, provider.id, id),
     fetchAppointmentFormsForProvider(supabase, id),
     fetchAppointmentDocumentsForProvider(supabase, id),
+    fetchProviderVisitNoteForAppointment(supabase, provider.id, id),
   ]);
 
   if (!appointment) notFound();
@@ -100,6 +103,12 @@ export default async function ProviderAppointmentDetailPage({
         </div>
         {timing.helperText ? <p className="mt-4 text-sm leading-6 muted">{timing.helperText}</p> : null}
       </section>
+
+      <ProviderVisitNoteEditor
+        appointmentId={appointment.id}
+        patientId={appointment.patient_id}
+        initialNote={note}
+      />
 
       <section className="grid gap-4 lg:grid-cols-2">
         <section className="panel px-6 py-6 sm:px-8">
