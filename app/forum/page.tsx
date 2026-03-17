@@ -22,6 +22,12 @@ type ForumPostRow = {
   body: string;
   created_at: string;
   profiles: AuthorProfile | null;
+  hasVerifiedProviderResponse?: boolean;
+};
+
+type ProviderRow = {
+  user_id: string;
+  verification_status: string | null;
 };
 
 export default function ForumPage() {
@@ -62,7 +68,45 @@ export default function ForumPage() {
         profiles: Array.isArray(post.profiles) ? post.profiles[0] : post.profiles,
       }));
 
-      setPosts((transformedData ?? []) as ForumPostRow[]);
+      const normalizedPosts = (transformedData ?? []) as ForumPostRow[];
+      const postIds = normalizedPosts.map((post) => post.id);
+
+      if (postIds.length === 0) {
+        setPosts([]);
+        setLoading(false);
+        return;
+      }
+
+      const { data: commentRows } = await supabase
+        .from("forum_comments")
+        .select("post_id,created_by")
+        .in("post_id", postIds);
+
+      const commentAuthors = Array.from(
+        new Set(((commentRows ?? []) as Array<{ post_id: string; created_by: string }>).map((row) => row.created_by))
+      );
+
+      let verifiedProviderUsers = new Set<string>();
+      if (commentAuthors.length > 0) {
+        const { data: providerRows } = await supabase
+          .from("providers")
+          .select("user_id,verification_status")
+          .in("user_id", commentAuthors)
+          .eq("verification_status", "verified");
+
+        verifiedProviderUsers = new Set(
+          ((providerRows ?? []) as ProviderRow[]).map((provider) => provider.user_id).filter(Boolean)
+        );
+      }
+
+      const postsWithSignals = normalizedPosts.map((post) => ({
+        ...post,
+        hasVerifiedProviderResponse: ((commentRows ?? []) as Array<{ post_id: string; created_by: string }>).some(
+          (row) => row.post_id === post.id && verifiedProviderUsers.has(row.created_by)
+        ),
+      }));
+
+      setPosts(postsWithSignals);
       setLoading(false);
     })();
   }, [supabase]);
@@ -130,6 +174,11 @@ export default function ForumPage() {
                 <div className="mt-2 flex items-center gap-2 text-xs opacity-70">
                   <span>{name}</span>
                   <RoleBadge role={role} />
+                  {p.hasVerifiedProviderResponse ? (
+                    <span className="rounded-full bg-[var(--accent-soft)] px-2.5 py-1 font-semibold text-[var(--accent-strong)]">
+                      Provider answered
+                    </span>
+                  ) : null}
                 </div>
 
                 <div className="mt-3 line-clamp-2 text-sm leading-6 muted">{p.body}</div>

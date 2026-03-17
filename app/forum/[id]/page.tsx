@@ -30,6 +30,7 @@ type CommentRow = {
   created_at: string;
   created_by: string;
   profiles: AuthorProfile | null;
+  provider: ProviderProfile | null;
 };
 
 type RawPost = {
@@ -48,6 +49,17 @@ type RawComment = {
   profiles: AuthorProfile | AuthorProfile[] | null;
 };
 
+type ProviderProfile = {
+  id: string;
+  user_id: string;
+  slug: string | null;
+  display_name: string;
+  credentials: string | null;
+  specialty: string | null;
+  states_served: string[] | null;
+  verification_status: string | null;
+};
+
 export default function ForumPostPage({
   params,
 }: {
@@ -63,11 +75,27 @@ export default function ForumPostPage({
   const [msg, setMsg] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [posting, setPosting] = useState(false);
+  const [currentUserProvider, setCurrentUserProvider] = useState<ProviderProfile | null>(null);
 
   useEffect(() => {
     (async () => {
       const { data } = await supabase.auth.getUser();
-      setUserId(data.user?.id ?? null);
+      const resolvedUserId = data.user?.id ?? null;
+      setUserId(resolvedUserId);
+
+      if (!resolvedUserId) {
+        setCurrentUserProvider(null);
+        return;
+      }
+
+      const { data: providerData } = await supabase
+        .from("providers")
+        .select("id,user_id,slug,display_name,credentials,specialty,states_served,verification_status")
+        .eq("user_id", resolvedUserId)
+        .eq("verification_status", "verified")
+        .maybeSingle();
+
+      setCurrentUserProvider((providerData as ProviderProfile | null) ?? null);
     })();
   }, [supabase]);
 
@@ -114,6 +142,23 @@ export default function ForumPostPage({
 
     if (commentError) setMsg(commentError.message);
 
+    const providerUserIds = Array.from(
+      new Set(((commentData ?? []) as RawComment[]).map((row) => row.created_by).filter(Boolean))
+    );
+    const providerMap = new Map<string, ProviderProfile>();
+
+    if (providerUserIds.length > 0) {
+      const { data: providerRows } = await supabase
+        .from("providers")
+        .select("id,user_id,slug,display_name,credentials,specialty,states_served,verification_status")
+        .in("user_id", providerUserIds)
+        .eq("verification_status", "verified");
+
+      for (const provider of (providerRows ?? []) as ProviderProfile[]) {
+        providerMap.set(provider.user_id, provider);
+      }
+    }
+
     const normalizedComments: CommentRow[] = (commentData ?? []).map((row: RawComment) => {
       const rawProfile = row.profiles;
       return {
@@ -122,6 +167,7 @@ export default function ForumPostPage({
         created_at: row.created_at,
         created_by: row.created_by,
         profiles: Array.isArray(rawProfile) ? (rawProfile[0] ?? null) : (rawProfile ?? null),
+        provider: providerMap.get(row.created_by) ?? null,
       };
     });
 
@@ -231,25 +277,72 @@ export default function ForumPostPage({
               <div className="text-sm muted">No comments yet.</div>
             ) : (
               <div className="space-y-3">
-                {comments.map((comment) => (
-                  <div key={comment.id} className="rounded-[24px] border border-[var(--border)] bg-white/65 p-4">
-                    <div className="flex items-center justify-between gap-3">
-                      <div className="flex items-center gap-2 text-xs opacity-70">
-                        <span>{comment.profiles?.display_name ?? "Unknown"}</span>
-                        <RoleBadge role={comment.profiles?.role ?? "patient"} />
-                      </div>
-                      <div className="text-xs opacity-60">
-                        {new Date(comment.created_at).toLocaleString()}
-                      </div>
-                    </div>
+                {comments.map((comment) => {
+                  const provider = comment.provider;
+                  const isVerifiedProvider = provider?.verification_status === "verified";
 
-                    <div className="mt-2 whitespace-pre-wrap text-sm leading-6">{comment.body}</div>
-                  </div>
-                ))}
+                  return (
+                    <div
+                      key={comment.id}
+                      className={`rounded-[24px] border p-4 ${
+                        isVerifiedProvider
+                          ? "border-[rgba(31,77,57,0.24)] bg-[rgba(220,239,227,0.42)]"
+                          : "border-[var(--border)] bg-white/65"
+                      }`}
+                    >
+                      <div className="flex items-start justify-between gap-3">
+                        <div>
+                          <div className="flex flex-wrap items-center gap-2 text-xs opacity-70">
+                            <span>{isVerifiedProvider ? provider.display_name : comment.profiles?.display_name ?? "Unknown"}</span>
+                            {isVerifiedProvider ? (
+                              <span className="rounded-full bg-white/90 px-2.5 py-1 font-semibold text-[var(--accent-strong)]">
+                                Verified Provider
+                              </span>
+                            ) : (
+                              <RoleBadge role={comment.profiles?.role ?? "patient"} />
+                            )}
+                          </div>
+                          {isVerifiedProvider ? (
+                            <div className="mt-2 text-sm leading-6 muted">
+                              {[provider.credentials, provider.specialty].filter(Boolean).join(" | ")}
+                            </div>
+                          ) : null}
+                        </div>
+                        <div className="text-xs opacity-60">
+                          {new Date(comment.created_at).toLocaleString()}
+                        </div>
+                      </div>
+
+                      <div className="mt-3 whitespace-pre-wrap text-sm leading-6">{comment.body}</div>
+
+                      {isVerifiedProvider && provider.slug ? (
+                        <div className="mt-4 rounded-[22px] border border-[rgba(31,77,57,0.12)] bg-white/78 px-4 py-4">
+                          <div className="flex flex-wrap gap-3">
+                            <Link href={`/providers/${provider.slug}`} className="btn-primary px-4 py-2 text-sm">
+                              Book an appointment with this provider
+                            </Link>
+                            <Link href={`/providers/${provider.slug}`} className="btn-secondary px-4 py-2 text-sm">
+                              View provider profile
+                            </Link>
+                          </div>
+                          <p className="mt-3 text-xs leading-5 muted">
+                            This response is for informational purposes and does not replace professional medical advice.
+                          </p>
+                        </div>
+                      ) : null}
+                    </div>
+                  );
+                })}
               </div>
             )}
 
             <div className="space-y-3 pt-2">
+              {currentUserProvider ? (
+                <div className="rounded-[22px] border border-[rgba(31,77,57,0.16)] bg-[rgba(220,239,227,0.38)] px-4 py-3 text-sm muted">
+                  Your reply will appear with your verified provider identity and link back to your CareBridge profile.
+                </div>
+              ) : null}
+
               <textarea
                 className="field min-h-[120px]"
                 placeholder="Write a comment..."
