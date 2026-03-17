@@ -3,6 +3,8 @@ import { getAuthenticatedUserOrRedirect } from "@/lib/auth/session";
 
 const portalLinks = [
   { href: "/portal", label: "Dashboard" },
+  { href: "/portal/check-in", label: "Daily check-in" },
+  { href: "/portal/health", label: "Health history" },
   { href: "/portal/appointments", label: "Appointments" },
   { href: "/portal/messages", label: "Messages" },
   { href: "/portal/documents", label: "Documents" },

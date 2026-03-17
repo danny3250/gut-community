@@ -52,6 +52,8 @@ export async function saveRecipeDraft(
   await syncRecipeIngredients(supabase, recipeId, input.ingredients);
   await syncRecipeSteps(supabase, recipeId, input.steps);
   await syncRecipeTags(supabase, recipeId, input.tagIds);
+  await syncRecipeConditions(supabase, recipeId, input.conditionIds ?? []);
+  await syncRecipeDenormalizedFields(supabase, recipeId);
 
   return { recipeId };
 }
@@ -121,5 +123,123 @@ async function syncRecipeTags(
   }));
 
   const { error } = await supabase.from("recipe_tag_map").insert(rows);
+  if (error) throw error;
+}
+
+async function syncRecipeConditions(
+  supabase: SupabaseClient,
+  recipeId: string,
+  conditionIds: string[]
+) {
+  await supabase.from("recipe_conditions").delete().eq("recipe_id", recipeId);
+
+  if (conditionIds.length === 0) return;
+
+  const rows = conditionIds.map((conditionId) => ({
+    recipe_id: recipeId,
+    condition_id: conditionId,
+  }));
+
+  const { error } = await supabase.from("recipe_conditions").insert(rows);
+  if (error) throw error;
+}
+
+async function syncRecipeDenormalizedFields(
+  supabase: SupabaseClient,
+  recipeId: string
+) {
+  const [
+    { data: conditionRows, error: conditionError },
+    { data: tagRows, error: tagError },
+    { data: ingredientRows, error: ingredientError },
+  ] = await Promise.all([
+    supabase
+      .from("recipe_conditions")
+      .select("condition_id,conditions(slug)")
+      .eq("recipe_id", recipeId),
+    supabase
+      .from("recipe_tag_map")
+      .select("recipe_tags(slug)")
+      .eq("recipe_id", recipeId),
+    supabase
+      .from("recipe_ingredients")
+      .select("ingredient_id")
+      .eq("recipe_id", recipeId)
+      .not("ingredient_id", "is", null),
+  ]);
+
+  if (conditionError) throw conditionError;
+  if (tagError) throw tagError;
+  if (ingredientError) throw ingredientError;
+
+  const conditionsSupported = Array.from(
+    new Set(
+      (conditionRows ?? [])
+        .flatMap((row) => {
+          const condition = Array.isArray(row.conditions) ? row.conditions[0] : row.conditions;
+          return condition?.slug ? [condition.slug] : [];
+        })
+        .sort()
+    )
+  );
+
+  const tags = Array.from(
+    new Set(
+      (tagRows ?? [])
+        .flatMap((row) => {
+          const tag = Array.isArray(row.recipe_tags) ? row.recipe_tags[0] : row.recipe_tags;
+          return tag?.slug ? [tag.slug] : [];
+        })
+        .sort()
+    )
+  );
+
+  const ingredientIds = Array.from(
+    new Set(
+      (ingredientRows ?? [])
+        .map((row) => row.ingredient_id)
+        .filter((value): value is string => typeof value === "string" && value.length > 0)
+    )
+  );
+
+  const conditionIds = (conditionRows ?? [])
+    .map((row) => {
+      const condition = Array.isArray(row.conditions) ? row.conditions[0] : row.conditions;
+      return condition?.slug ? row.condition_id ?? null : null;
+    })
+    .filter((value): value is string => typeof value === "string" && value.length > 0);
+
+  let avoids: string[] = [];
+  if (conditionIds.length > 0) {
+    const { data: avoidRows, error: avoidError } = await supabase
+      .from("ingredient_avoidance")
+      .select("ingredients(slug)")
+      .in("condition_id", conditionIds);
+
+    if (avoidError) throw avoidError;
+
+    avoids = Array.from(
+      new Set(
+        (avoidRows ?? [])
+          .flatMap((row) => {
+            const ingredient = Array.isArray(row.ingredients) ? row.ingredients[0] : row.ingredients;
+            return ingredient?.slug ? [ingredient.slug] : [];
+          })
+          .sort()
+      )
+    );
+  }
+
+  const { error } = await supabase
+    .from("recipes")
+    .update({
+      conditions_supported: conditionsSupported,
+      tags,
+      avoids,
+      ingredient_ids: ingredientIds,
+      updated_at: new Date().toISOString(),
+    })
+    .eq("id", recipeId);
+
   if (error) throw error;
 }

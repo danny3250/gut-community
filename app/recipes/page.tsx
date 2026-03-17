@@ -3,20 +3,28 @@
 import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 import { createClient } from "@/lib/supabase/client";
+import { getRecipesByConditions } from "@/lib/recipes/queries";
 import FavoritesDrawer from "./FavoritesDrawer";
 import SaveToggle from "./SaveToggle";
 
-type Tag = { id: string; name: string };
+type Tag = { id: string; name: string; slug: string };
+type Condition = { id: string; name: string; slug: string };
 
 type RecipeRow = {
   id: string;
+  slug?: string | null;
   title: string;
+  name?: string | null;
   summary: string | null;
   description: string | null;
   servings: number | null;
   prep_time_minutes: number | null;
   cook_time_minutes: number | null;
   total_time_minutes: number | null;
+  tags?: string[];
+  conditions_supported?: string[];
+  ingredient_ids?: string[];
+  why_this_helps?: string | null;
   created_at: string;
   status: "draft" | "published" | string;
   created_by?: string;
@@ -37,7 +45,9 @@ export default function RecipesPage() {
   const [favoriteIds, setFavoriteIds] = useState<Set<string>>(new Set());
   const [favOpen, setFavOpen] = useState(false);
   const [tags, setTags] = useState<Tag[]>([]);
+  const [conditions, setConditions] = useState<Condition[]>([]);
   const [selected, setSelected] = useState<Set<string>>(new Set());
+  const [selectedConditions, setSelectedConditions] = useState<Set<string>>(new Set());
   const [published, setPublished] = useState<RecipeRow[]>([]);
   const [drafts, setDrafts] = useState<RecipeRow[]>([]);
   const [tagsByRecipe, setTagsByRecipe] = useState<Record<string, Tag[]>>({});
@@ -46,6 +56,20 @@ export default function RecipesPage() {
   const [err, setErr] = useState<string | null>(null);
 
   const selectedIds = useMemo(() => Array.from(selected), [selected]);
+  const selectedConditionIds = useMemo(() => Array.from(selectedConditions), [selectedConditions]);
+  const selectedTagSlugs = useMemo(
+    () => tags.filter((tag) => selected.has(tag.id)).map((tag) => tag.slug),
+    [selected, tags]
+  );
+
+  function toggleCondition(id: string) {
+    setSelectedConditions((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  }
 
   function toggleTag(id: string) {
     setSelected((prev) => {
@@ -65,8 +89,15 @@ export default function RecipesPage() {
 
   useEffect(() => {
     (async () => {
-      const { data, error } = await supabase.from("recipe_tags").select("id,name").order("name");
+      const { data, error } = await supabase.from("recipe_tags").select("id,name,slug").order("name");
       if (!error) setTags((data ?? []) as Tag[]);
+    })();
+  }, [supabase]);
+
+  useEffect(() => {
+    (async () => {
+      const { data, error } = await supabase.from("conditions").select("id,name,slug").order("name");
+      if (!error) setConditions((data ?? []) as Condition[]);
     })();
   }, [supabase]);
 
@@ -130,10 +161,58 @@ export default function RecipesPage() {
       setLoadingPublished(true);
       setErr(null);
 
+      const selectedConditionSlugs = conditions
+        .filter((condition) => selectedConditions.has(condition.id))
+        .map((condition) => condition.slug);
+
+      if (selectedConditionSlugs.length > 0) {
+        const { data: avoidRows, error: avoidError } = await supabase
+          .from("ingredient_avoidance")
+          .select("ingredient_id")
+          .in("condition_id", selectedConditionIds);
+
+        if (avoidError) {
+          setErr(avoidError.message);
+          setPublished([]);
+          setLoadingPublished(false);
+          return;
+        }
+
+        try {
+          const rows = await getRecipesByConditions(
+            supabase,
+            selectedConditionSlugs,
+            (avoidRows ?? [])
+              .map((row: { ingredient_id: string | null }) => row.ingredient_id)
+              .filter((value): value is string => typeof value === "string" && value.length > 0)
+          );
+
+          const filteredByTags =
+            selectedTagSlugs.length === 0
+              ? rows
+              : rows.filter((row) => selectedTagSlugs.every((slug) => row.tags.includes(slug)));
+
+          setPublished(
+            filteredByTags.map((row) => ({
+              ...row,
+              title: row.name ?? row.title ?? "Recipe",
+              summary: row.summary ?? row.description ?? null,
+              description: row.description ?? null,
+            })) as RecipeRow[]
+          );
+        } catch (error) {
+          setErr(error instanceof Error ? error.message : "Could not filter recipes.");
+          setPublished([]);
+        }
+
+        setLoadingPublished(false);
+        return;
+      }
+
       if (selectedIds.length === 0) {
         const { data, error } = await supabase
           .from("recipes")
-          .select("id,title,summary,description,servings,prep_time_minutes,cook_time_minutes,total_time_minutes,created_at,status")
+          .select("id,slug,title,name,summary,description,servings,prep_time_minutes,cook_time_minutes,total_time_minutes,tags,conditions_supported,ingredient_ids,why_this_helps,created_at,status")
           .eq("status", "published")
           .order("created_at", { ascending: false })
           .limit(60);
@@ -172,7 +251,7 @@ export default function RecipesPage() {
 
       const { data: recipesData, error: recipesErr } = await supabase
         .from("recipes")
-        .select("id,title,summary,description,servings,prep_time_minutes,cook_time_minutes,total_time_minutes,created_at,status")
+        .select("id,slug,title,name,summary,description,servings,prep_time_minutes,cook_time_minutes,total_time_minutes,tags,conditions_supported,ingredient_ids,why_this_helps,created_at,status")
         .eq("status", "published")
         .in("id", matchingRecipeIds)
         .order("created_at", { ascending: false });
@@ -181,7 +260,7 @@ export default function RecipesPage() {
       setPublished((recipesData ?? []) as RecipeRow[]);
       setLoadingPublished(false);
     })();
-  }, [selectedIds, supabase]);
+  }, [conditions, selectedConditionIds, selectedConditions, selectedIds, selectedTagSlugs, supabase]);
 
   useEffect(() => {
     const recipeIds = published.map((recipe) => recipe.id);
@@ -202,7 +281,7 @@ export default function RecipesPage() {
       }
 
       const tagIds = Array.from(new Set(mapRows.map((row: { tag_id: string }) => row.tag_id)));
-      const { data: tagRows } = await supabase.from("recipe_tags").select("id,name").in("id", tagIds);
+      const { data: tagRows } = await supabase.from("recipe_tags").select("id,name,slug").in("id", tagIds);
       const tagMap = new Map((tagRows ?? []).map((row: Tag) => [row.id, row]));
       const next: Record<string, Tag[]> = {};
 
@@ -300,7 +379,27 @@ export default function RecipesPage() {
 
       <section className="grid gap-4 lg:grid-cols-[1.15fr_0.85fr]">
         <div className="panel px-5 py-5 sm:px-6">
-          <div className="text-sm font-semibold">Filter by tags</div>
+          <div className="text-sm font-semibold">Filter by conditions</div>
+          <div className="mt-4 flex flex-wrap gap-2">
+            {conditions.map((condition) => {
+              const checked = selectedConditions.has(condition.id);
+              return (
+                <button
+                  key={condition.id}
+                  type="button"
+                  onClick={() => toggleCondition(condition.id)}
+                  className={
+                    checked
+                      ? "rounded-full bg-[var(--accent)] px-4 py-2 text-sm font-semibold text-white"
+                      : "rounded-full border border-[var(--border)] bg-white/70 px-4 py-2 text-sm"
+                  }
+                >
+                  {condition.name}
+                </button>
+              );
+            })}
+          </div>
+          <div className="mt-5 text-sm font-semibold">Filter by tags</div>
           <div className="mt-4 flex flex-wrap gap-2">
             {tags.map((tag) => {
               const checked = selected.has(tag.id);
@@ -320,19 +419,21 @@ export default function RecipesPage() {
               );
             })}
 
-            {selected.size > 0 ? (
+            {selected.size > 0 || selectedConditions.size > 0 ? (
               <button
                 type="button"
                 className="rounded-full border border-[var(--border)] bg-white/70 px-4 py-2 text-sm"
-                onClick={() => setSelected(new Set())}
+                onClick={() => {
+                  setSelected(new Set());
+                  setSelectedConditions(new Set());
+                }}
               >
                 Clear filters
               </button>
             ) : null}
           </div>
           <div className="mt-3 text-xs muted">
-            Public recipes stay open to everyone. Member tools like saved recipes and future shopping
-            lists build on top of the same recipe data.
+            Condition filters use denormalized recipe fields for fast reads, while the relational tables stay as the source of truth behind the scenes.
           </div>
         </div>
 
@@ -419,6 +520,10 @@ export default function RecipesPage() {
                               </span>
                             ))}
                           </div>
+                        ) : null}
+
+                        {recipe.why_this_helps ? (
+                          <div className="mt-3 text-sm leading-6 muted">{recipe.why_this_helps}</div>
                         ) : null}
 
                         <div className="mt-4 text-xs opacity-60">

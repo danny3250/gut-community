@@ -3,6 +3,11 @@ import { getCurrentUserWithRole } from "@/lib/auth/session";
 
 const quickActions = [
   {
+    title: "Daily check-in",
+    description: "Log how you feel, symptoms, foods, sleep, and stress in under a minute.",
+    href: "/portal/check-in",
+  },
+  {
     title: "Book care",
     description: "Find a provider and request a telehealth or follow-up visit without extra phone tag.",
     href: "/providers",
@@ -34,6 +39,9 @@ export default async function PortalDashboardPage() {
             forms, resources, and community support connected in one calmer place.
           </p>
           <div className="flex flex-wrap gap-3">
+            <Link href="/portal/check-in" className="btn-primary">
+              Daily check-in
+            </Link>
             <Link href="/portal/appointments" className="btn-primary">
               View appointments
             </Link>
@@ -45,9 +53,9 @@ export default async function PortalDashboardPage() {
 
         <div className="panel-strong grid gap-4 px-5 py-5 sm:grid-cols-2">
           <MiniCard title="Upcoming visits" body="Telehealth and follow-up appointments in one timeline." />
+          <MiniCard title="Daily health check" body="Track symptoms, foods, sleep, and stress without a long form." />
           <MiniCard title="Intake ready" body="Complete forms before visits to reduce check-in friction." />
           <MiniCard title="Resources" body="Return to trustworthy educational content and supportive wellness tools." />
-          <MiniCard title="Community" body="Stay connected to moderated discussion and shared patient support." />
         </div>
       </section>
 

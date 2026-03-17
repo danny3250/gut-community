@@ -32,6 +32,7 @@ export type RecipeDraftInput = {
   isPublic: boolean;
   status: "draft" | "published";
   tagIds: string[];
+  conditionIds?: string[];
   ingredients: RecipeIngredientDraft[];
   steps: RecipeStepDraft[];
 };
