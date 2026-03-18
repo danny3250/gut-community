@@ -7,6 +7,9 @@
 alter table if exists public.profiles
   drop constraint if exists profiles_role_check;
 
+alter table if exists public.profiles
+  disable trigger protect_profile_role_changes;
+
 update public.profiles
 set role = case
   when role is null then 'patient'
@@ -15,6 +18,9 @@ set role = case
   when role::text in ('staff', 'support') then 'support_staff'
   else 'patient'
 end;
+
+alter table if exists public.profiles
+  enable trigger protect_profile_role_changes;
 
 alter table if exists public.profiles
   add constraint profiles_role_check

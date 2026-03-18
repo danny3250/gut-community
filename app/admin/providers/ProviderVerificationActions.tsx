@@ -3,17 +3,27 @@
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 
-export default function ProviderVerificationActions({ providerId }: { providerId: string }) {
+export default function ProviderVerificationActions({
+  applicationId,
+  currentStatus,
+  hasActiveProvider,
+  providerStatus,
+}: {
+  applicationId: string;
+  currentStatus: string;
+  hasActiveProvider: boolean;
+  providerStatus: string | null;
+}) {
   const router = useRouter();
   const [rejectionReason, setRejectionReason] = useState("");
   const [loadingState, setLoadingState] = useState<string | null>(null);
   const [message, setMessage] = useState<string | null>(null);
 
-  async function updateStatus(status: "verified" | "rejected" | "suspended" | "pending") {
+  async function updateStatus(status: "approved" | "rejected" | "suspended" | "pending") {
     setLoadingState(status);
     setMessage(null);
 
-    const response = await fetch(`/api/admin/providers/${providerId}/status`, {
+    const response = await fetch(`/api/admin/providers/${applicationId}/status`, {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
@@ -36,14 +46,28 @@ export default function ProviderVerificationActions({ providerId }: { providerId
 
   return (
     <div className="space-y-3">
+      <div className="rounded-[24px] border border-[var(--border)] bg-white/72 px-4 py-4 text-sm leading-6 muted">
+        Current application status: <span className="font-semibold capitalize text-[var(--foreground)]">{currentStatus}</span>
+        {hasActiveProvider ? (
+          <>
+            {" "}· Active provider record: <span className="font-semibold capitalize text-[var(--foreground)]">{providerStatus ?? "active"}</span>
+          </>
+        ) : null}
+      </div>
+
       <div className="flex flex-wrap gap-2">
-        <button type="button" className="btn-primary px-4 py-2 text-sm" onClick={() => updateStatus("verified")} disabled={loadingState !== null}>
-          {loadingState === "verified" ? "Approving..." : "Approve"}
+        <button type="button" className="btn-primary px-4 py-2 text-sm" onClick={() => updateStatus("approved")} disabled={loadingState !== null}>
+          {loadingState === "approved" ? "Approving..." : "Approve"}
         </button>
-        <button type="button" className="btn-secondary px-4 py-2 text-sm" onClick={() => updateStatus("pending")} disabled={loadingState !== null}>
+        <button
+          type="button"
+          className="btn-secondary px-4 py-2 text-sm"
+          onClick={() => updateStatus("pending")}
+          disabled={loadingState !== null || hasActiveProvider}
+        >
           {loadingState === "pending" ? "Saving..." : "Mark pending"}
         </button>
-        <button type="button" className="btn-secondary px-4 py-2 text-sm" onClick={() => updateStatus("suspended")} disabled={loadingState !== null}>
+        <button type="button" className="btn-secondary px-4 py-2 text-sm" onClick={() => updateStatus("suspended")} disabled={loadingState !== null || !hasActiveProvider}>
           {loadingState === "suspended" ? "Saving..." : "Suspend"}
         </button>
       </div>

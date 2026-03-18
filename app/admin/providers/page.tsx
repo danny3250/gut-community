@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { getCurrentUserWithRole } from "@/lib/auth/session";
-import { fetchAllProvidersForAdmin, getProviderVerificationMessage } from "@/lib/carebridge/providers";
+import { fetchProviderApplicationsForAdmin, getProviderApplicationMessage } from "@/lib/carebridge/providers";
 import ProviderVerificationActions from "./ProviderVerificationActions";
 
 type AdminProvidersPageProps = {
@@ -10,19 +10,19 @@ type AdminProvidersPageProps = {
 export default async function AdminProvidersPage({ searchParams }: AdminProvidersPageProps) {
   const resolvedSearchParams = await searchParams;
   const { supabase, role, organizationId, organizationName } = await getCurrentUserWithRole();
-  const providers = await fetchAllProvidersForAdmin(supabase);
+  const applications = await fetchProviderApplicationsForAdmin(supabase);
   const selectedStatus = resolvedSearchParams.status?.trim() ?? "";
 
-  const tenantScopedProviders =
+  const tenantScopedApplications =
     role === "admin" || !organizationId
-      ? providers
-      : providers.filter((provider) => provider.organization_id === organizationId);
+      ? applications
+      : applications.filter((application) => application.organization_id === organizationId);
 
-  const visibleProviders = selectedStatus
-    ? tenantScopedProviders.filter((provider) => provider.verification_status === selectedStatus)
-    : tenantScopedProviders;
+  const visibleApplications = selectedStatus
+    ? tenantScopedApplications.filter((application) => application.status === selectedStatus)
+    : tenantScopedApplications;
 
-  const statuses = ["draft", "pending", "verified", "rejected", "suspended"];
+  const statuses = ["pending", "approved", "rejected"];
 
   return (
     <section className="grid gap-5">
@@ -53,40 +53,48 @@ export default async function AdminProvidersPage({ searchParams }: AdminProvider
       </section>
 
       <section className="grid gap-4">
-        {visibleProviders.length === 0 ? (
+        {visibleApplications.length === 0 ? (
           <div className="panel px-6 py-6 text-sm muted">No provider applications match this status yet.</div>
         ) : (
-          visibleProviders.map((provider) => (
-            <article key={provider.id} className="panel px-6 py-6 sm:px-8">
+          visibleApplications.map((application) => (
+            <article key={application.id} className="panel px-6 py-6 sm:px-8">
               <div className="grid gap-6 xl:grid-cols-[1.15fr_0.85fr]">
                 <div>
                   <div className="flex flex-wrap items-center gap-3">
-                    <h2 className="text-2xl font-semibold">{provider.display_name}</h2>
+                    <h2 className="text-2xl font-semibold">{application.display_name}</h2>
                     <span className="rounded-full bg-[var(--accent-soft)] px-3 py-1 text-xs font-semibold capitalize text-[var(--accent-strong)]">
-                      {provider.verification_status}
+                      {application.status}
                     </span>
+                    {application.active_provider?.verification_status === "suspended" ? (
+                      <span className="rounded-full border border-[var(--border)] bg-white/80 px-3 py-1 text-xs font-semibold capitalize">
+                        Suspended
+                      </span>
+                    ) : null}
                   </div>
                   <p className="mt-2 text-sm leading-6 muted">
-                    {[provider.credentials, provider.specialty].filter(Boolean).join(" | ") || "Profile details still in progress."}
+                    {[application.credentials, application.specialty].filter(Boolean).join(" | ") || "Profile details still in progress."}
                   </p>
                   <div className="mt-4 grid gap-3 sm:grid-cols-2">
-                    <InfoCard label="States served" value={provider.states_served.join(", ") || "None listed"} />
-                    <InfoCard label="License states" value={(provider.license_states ?? []).join(", ") || "None listed"} />
-                    <InfoCard label="License number" value={provider.license_number || "Not provided"} />
-                    <InfoCard label="NPI number" value={provider.npi_number || "Not provided"} />
-                    <InfoCard label="Organization" value={provider.organization?.name || "Independent"} />
-                    <InfoCard label="Submitted" value={provider.verification_submitted_at ? new Date(provider.verification_submitted_at).toLocaleString() : "Not submitted"} />
+                    <InfoCard label="Applicant name" value={application.full_name || application.display_name} />
+                    <InfoCard label="States served" value={application.states_served.join(", ") || "None listed"} />
+                    <InfoCard label="License states" value={application.license_states.join(", ") || "None listed"} />
+                    <InfoCard label="License number" value={application.license_number || "Not provided"} />
+                    <InfoCard label="NPI number" value={application.npi_number || "Not provided"} />
+                    <InfoCard label="Organization" value={application.organization?.name || "Independent"} />
+                    <InfoCard label="Submitted" value={application.submitted_at ? new Date(application.submitted_at).toLocaleString() : "Not submitted"} />
                   </div>
 
-                  {provider.bio ? <p className="mt-4 text-sm leading-6 muted">{provider.bio}</p> : null}
+                  {application.bio ? <p className="mt-4 text-sm leading-6 muted">{application.bio}</p> : null}
 
                   <div className="mt-4 rounded-[24px] border border-[var(--border)] bg-white/72 px-4 py-4 text-sm leading-6 muted">
-                    {getProviderVerificationMessage(provider)}
+                    {application.active_provider
+                      ? `Active provider record: ${application.active_provider.verification_status}. ${application.active_provider.verification_status === "verified" ? "This provider can appear publicly and accept bookings." : "Public visibility and bookings are currently limited."}`
+                      : getProviderApplicationMessage(application)}
                   </div>
 
                   <div className="mt-4 flex flex-wrap gap-3">
-                    {provider.slug && provider.verification_status === "verified" ? (
-                      <Link href={`/providers/${provider.slug}`} className="btn-secondary px-4 py-2 text-sm">
+                    {application.active_provider?.slug && application.active_provider.verification_status === "verified" ? (
+                      <Link href={`/providers/${application.active_provider.slug}`} className="btn-secondary px-4 py-2 text-sm">
                         View public profile
                       </Link>
                     ) : null}
@@ -96,7 +104,12 @@ export default async function AdminProvidersPage({ searchParams }: AdminProvider
                   </div>
                 </div>
 
-                <ProviderVerificationActions providerId={provider.id} />
+                <ProviderVerificationActions
+                  applicationId={application.id}
+                  currentStatus={application.status}
+                  hasActiveProvider={Boolean(application.active_provider)}
+                  providerStatus={application.active_provider?.verification_status ?? null}
+                />
               </div>
             </article>
           ))

@@ -2,15 +2,22 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import SignupForm from "@/app/components/SignupForm";
 import { getCurrentUserWithRole } from "@/lib/auth/session";
-import { fetchProviderByUserId } from "@/lib/carebridge/providers";
+import { fetchProviderApplicationByUserId, fetchProviderByUserId } from "@/lib/carebridge/providers";
 
 export default async function ProviderApplyPage() {
   const { supabase, user, role } = await getCurrentUserWithRole();
 
   if (user) {
-    const provider = await fetchProviderByUserId(supabase, user.id);
+    const [provider, application] = await Promise.all([
+      fetchProviderByUserId(supabase, user.id),
+      fetchProviderApplicationByUserId(supabase, user.id),
+    ]);
 
     if (provider) {
+      redirect("/provider");
+    }
+
+    if (application) {
       redirect("/provider/onboarding");
     }
   }

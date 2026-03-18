@@ -2,7 +2,7 @@
 
 import { useRouter } from "next/navigation";
 import { useState } from "react";
-import type { ProviderDirectoryRecord } from "@/lib/carebridge/types";
+import type { ProviderApplicationRecord, ProviderDirectoryRecord } from "@/lib/carebridge/types";
 
 type OrganizationOption = {
   id: string;
@@ -10,25 +10,28 @@ type OrganizationOption = {
 };
 
 export default function ProviderOnboardingForm({
+  application,
   provider,
   organizations,
 }: {
+  application: ProviderApplicationRecord | null;
   provider: ProviderDirectoryRecord | null;
   organizations: OrganizationOption[];
 }) {
   const router = useRouter();
-  const [legalName, setLegalName] = useState(provider?.display_name ?? "");
-  const [displayName, setDisplayName] = useState(provider?.display_name ?? "");
-  const [credentials, setCredentials] = useState(provider?.credentials ?? "");
-  const [specialty, setSpecialty] = useState(provider?.specialty ?? "");
-  const [statesServed, setStatesServed] = useState((provider?.states_served ?? []).join(", "));
-  const [licenseStates, setLicenseStates] = useState((provider?.license_states ?? []).join(", "));
-  const [licenseNumber, setLicenseNumber] = useState(provider?.license_number ?? "");
-  const [npiNumber, setNpiNumber] = useState(provider?.npi_number ?? "");
-  const [bio, setBio] = useState(provider?.bio ?? "");
-  const [telehealthEnabled, setTelehealthEnabled] = useState(provider?.telehealth_enabled ?? true);
-  const [organizationId, setOrganizationId] = useState(provider?.organization_id ?? "");
-  const [isAcceptingPatients, setIsAcceptingPatients] = useState(provider?.is_accepting_patients ?? false);
+  const initialRecord = application ?? provider;
+  const [legalName, setLegalName] = useState(application?.full_name ?? provider?.display_name ?? "");
+  const [displayName, setDisplayName] = useState(initialRecord?.display_name ?? "");
+  const [credentials, setCredentials] = useState(initialRecord?.credentials ?? "");
+  const [specialty, setSpecialty] = useState(initialRecord?.specialty ?? "");
+  const [statesServed, setStatesServed] = useState((initialRecord?.states_served ?? []).join(", "));
+  const [licenseStates, setLicenseStates] = useState((initialRecord?.license_states ?? []).join(", "));
+  const [licenseNumber, setLicenseNumber] = useState(initialRecord?.license_number ?? "");
+  const [npiNumber, setNpiNumber] = useState(initialRecord?.npi_number ?? "");
+  const [bio, setBio] = useState(initialRecord?.bio ?? "");
+  const [telehealthEnabled, setTelehealthEnabled] = useState(initialRecord?.telehealth_enabled ?? true);
+  const [organizationId, setOrganizationId] = useState(initialRecord?.organization_id ?? "");
+  const [isAcceptingPatients, setIsAcceptingPatients] = useState(initialRecord?.is_accepting_patients ?? false);
   const [message, setMessage] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
 
@@ -138,7 +141,13 @@ export default function ProviderOnboardingForm({
 
       <div className="mt-6">
         <button type="submit" className="btn-primary" disabled={saving}>
-          {saving ? "Submitting..." : provider?.verification_status === "rejected" ? "Update and resubmit" : "Submit for review"}
+          {saving
+            ? "Submitting..."
+            : application?.status === "rejected"
+              ? "Update and resubmit"
+              : application?.status === "pending"
+                ? "Update application"
+                : "Submit for review"}
         </button>
       </div>
     </form>

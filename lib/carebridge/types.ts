@@ -24,6 +24,32 @@ export type ProviderDirectoryRecord = {
   organization: { name: string | null; slug?: string | null } | null;
 };
 
+export type ProviderApplicationRecord = {
+  id: string;
+  user_id: string;
+  full_name: string | null;
+  display_name: string;
+  credentials: string | null;
+  specialty: string | null;
+  bio: string | null;
+  states_served: string[];
+  license_states: string[];
+  telehealth_enabled: boolean;
+  organization_id: string | null;
+  license_number: string | null;
+  npi_number: string | null;
+  is_accepting_patients: boolean;
+  status: "pending" | "approved" | "rejected" | string;
+  submitted_at: string | null;
+  reviewed_at: string | null;
+  reviewed_by_user_id: string | null;
+  rejection_reason: string | null;
+  created_at: string;
+  updated_at: string;
+  organization: { name: string | null; slug?: string | null } | null;
+  active_provider: ProviderDirectoryRecord | null;
+};
+
 export type ProviderAvailabilityRecord = {
   id: string;
   provider_id: string;

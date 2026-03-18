@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { createNotification } from "@/lib/carebridge/notifications";
-import { fetchProviderByUserId, slugifyProviderName } from "@/lib/carebridge/providers";
+import { fetchProviderApplicationByUserId } from "@/lib/carebridge/providers";
 
 type OnboardingPayload = {
   legalName?: string;
@@ -44,17 +44,16 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "Display name is required." }, { status: 400 });
     }
 
-    const existingProvider = await fetchProviderByUserId(supabase, user.id);
-    const verificationStatus = existingProvider?.verification_status === "verified" ? "verified" : "pending";
+    const existingApplication = await fetchProviderApplicationByUserId(supabase, user.id);
     const now = new Date().toISOString();
 
     const statesServed = normalizeStateList(payload.statesServed);
     const licenseStates = normalizeStateList(payload.licenseStates?.length ? payload.licenseStates : payload.statesServed);
 
-    const providerPayload = {
+    const applicationPayload = {
       user_id: user.id,
+      full_name: payload.legalName?.trim() || payload.displayName.trim(),
       display_name: payload.displayName.trim(),
-      slug: slugifyProviderName(payload.displayName.trim()),
       credentials: payload.credentials?.trim() || null,
       specialty: payload.specialty?.trim() || null,
       bio: payload.bio?.trim() || null,
@@ -64,21 +63,31 @@ export async function POST(request: NextRequest) {
       npi_number: payload.npiNumber?.trim() || null,
       telehealth_enabled: payload.telehealthEnabled ?? true,
       organization_id: payload.organizationId || null,
-      verification_status: verificationStatus,
-      verification_submitted_at: now,
-      onboarding_completed: true,
       is_accepting_patients: payload.isAcceptingPatients ?? false,
-      rejection_reason: verificationStatus === "pending" ? null : existingProvider?.rejection_reason ?? null,
+      status: "pending",
+      submitted_at: existingApplication?.submitted_at ?? now,
+      reviewed_at: null,
+      reviewed_by_user_id: null,
+      rejection_reason: null,
       updated_at: now,
     };
 
-    const { data: providerRow, error: providerError } = existingProvider
-      ? await supabase.from("providers").update(providerPayload).eq("id", existingProvider.id).select("id").single()
-      : await supabase.from("providers").insert(providerPayload).select("id").single();
+    const { data: applicationRow, error: applicationError } = existingApplication
+      ? await supabase
+          .from("provider_applications")
+          .update(applicationPayload)
+          .eq("id", existingApplication.id)
+          .select("id,status")
+          .single()
+      : await supabase
+          .from("provider_applications")
+          .insert(applicationPayload)
+          .select("id,status")
+          .single();
 
-    if (providerError || !providerRow) {
+    if (applicationError || !applicationRow) {
       return NextResponse.json(
-        { error: providerError?.message ?? "Could not save provider application." },
+        { error: applicationError?.message ?? "Could not save provider application." },
         { status: 400 }
       );
     }
@@ -98,21 +107,14 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: profileError.message }, { status: 400 });
     }
 
-    const { data: promotedRole, error: roleSyncError } = await supabase.rpc("promote_current_user_to_provider_role");
-    if (roleSyncError) {
-      return NextResponse.json({ error: roleSyncError.message }, { status: 400 });
-    }
-
-    const actorRole = typeof promotedRole === "string" && promotedRole.length > 0 ? promotedRole : "provider";
-
     const { error: auditError } = await supabase.from("audit_logs").insert({
       actor_user_id: user.id,
-      actor_role: actorRole,
-      action: "provider_submitted_application",
-      entity_type: "provider",
-      entity_id: providerRow.id,
+      actor_role: "patient",
+      action: "provider_application_submitted",
+      entity_type: "provider_application",
+      entity_id: applicationRow.id,
       metadata_json: {
-        verification_status: verificationStatus,
+        application_status: "pending",
         states_served: statesServed,
         telehealth_enabled: payload.telehealthEnabled ?? true,
       },
@@ -130,15 +132,15 @@ export async function POST(request: NextRequest) {
         body: "Your provider profile has been submitted for review. Public listing and bookings will activate after verification.",
         linkUrl: "/provider",
         metadata: {
-          provider_id: providerRow.id,
-          verification_status: verificationStatus,
+          provider_application_id: applicationRow.id,
+          application_status: "pending",
         },
       });
     } catch (notificationError) {
       console.error("[provider/onboarding] notification insert failed", notificationError);
     }
 
-    return NextResponse.json({ ok: true, providerId: providerRow.id, verificationStatus });
+    return NextResponse.json({ ok: true, applicationId: applicationRow.id, status: applicationRow.status });
   } catch (error) {
     console.error("[provider/onboarding] unexpected failure", error);
     return NextResponse.json(

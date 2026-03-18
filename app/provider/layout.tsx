@@ -3,6 +3,7 @@ import CareWorkspaceShell from "@/app/components/CareWorkspaceShell";
 import { getCurrentUserWithRole } from "@/lib/auth/session";
 import { getUnreadNotificationCount } from "@/lib/carebridge/notifications";
 import { isAdmin, isProvider } from "@/lib/auth/roles";
+import { fetchProviderApplicationByUserId, fetchProviderByUserId, hasActiveProviderAccess } from "@/lib/carebridge/providers";
 
 const providerLinks = [
   { href: "/provider", label: "Dashboard" },
@@ -24,17 +25,33 @@ export default async function ProviderLayout({ children }: { children: React.Rea
   const { user, role, supabase } = await getCurrentUserWithRole();
 
   if (!user) redirect("/login");
-  if (!isProvider(role) && !isAdmin(role)) redirect("/portal");
-  const unreadNotifications = await getUnreadNotificationCount(supabase, user.id);
-  const resolvedPrimaryLinks = providerLinks.map((link) =>
-    link.href === "/provider/notifications" ? { ...link, badgeCount: unreadNotifications } : link
-  );
+  const [provider, application] = await Promise.all([
+    fetchProviderByUserId(supabase, user.id),
+    fetchProviderApplicationByUserId(supabase, user.id),
+  ]);
+
+  const hasApplicantAccess = Boolean(application || provider);
+  if (!isProvider(role) && !isAdmin(role) && !hasApplicantAccess) redirect("/portal");
+
+  const hasActiveAccess = isAdmin(role) || hasActiveProviderAccess(provider);
+  const unreadNotifications = hasActiveAccess ? await getUnreadNotificationCount(supabase, user.id) : 0;
+  const resolvedPrimaryLinks = (hasActiveAccess
+    ? providerLinks
+    : [
+        { href: "/provider", label: "Application status" },
+        { href: "/provider/onboarding", label: "Provider application" },
+      ]
+  ).map((link) => (link.href === "/provider/notifications" ? { ...link, badgeCount: unreadNotifications } : link));
 
   return (
     <CareWorkspaceShell
       areaLabel="Provider Portal"
-      title="CareBridge provider access"
-      description="Scheduling, patient review, visit launch, and communication scaffolding for remote care workflows."
+      title={hasActiveAccess ? "CareBridge provider access" : "CareBridge provider application"}
+      description={
+        hasActiveAccess
+          ? "Scheduling, patient review, visit launch, and communication tools for approved providers."
+          : "Track your application status, update your information, and prepare for provider review."
+      }
       email={user.email ?? null}
       primaryLinks={resolvedPrimaryLinks}
       secondaryLinks={secondaryLinks}

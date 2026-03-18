@@ -1,5 +1,5 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
-import { ProviderAvailabilityRecord, ProviderDirectoryRecord } from "@/lib/carebridge/types";
+import { ProviderApplicationRecord, ProviderAvailabilityRecord, ProviderDirectoryRecord } from "@/lib/carebridge/types";
 
 export type ProviderVerificationStatus = "draft" | "pending" | "verified" | "rejected" | "suspended";
 
@@ -29,8 +29,37 @@ type ProviderRow = {
   organizations?: { name: string | null; slug?: string | null } | { name: string | null; slug?: string | null }[] | null;
 };
 
+type ProviderApplicationStatus = "pending" | "approved" | "rejected";
+
+type ProviderApplicationRow = {
+  id: string;
+  user_id: string;
+  full_name: string | null;
+  display_name: string;
+  credentials: string | null;
+  specialty: string | null;
+  bio: string | null;
+  states_served: string[] | null;
+  license_states: string[] | null;
+  telehealth_enabled: boolean | null;
+  organization_id: string | null;
+  license_number: string | null;
+  npi_number: string | null;
+  is_accepting_patients: boolean | null;
+  status: ProviderApplicationStatus | null;
+  submitted_at: string | null;
+  reviewed_at: string | null;
+  reviewed_by_user_id: string | null;
+  rejection_reason: string | null;
+  created_at: string;
+  updated_at: string;
+  organizations?: { name: string | null; slug?: string | null } | { name: string | null; slug?: string | null }[] | null;
+};
+
 const PROVIDER_SELECT =
   "id,user_id,organization_id,slug,display_name,credentials,specialty,bio,states_served,license_states,telehealth_enabled,areas_of_care,visit_types,verification_status,verification_submitted_at,verified_at,verified_by_user_id,rejection_reason,license_number,npi_number,onboarding_completed,is_accepting_patients,organizations(name,slug)";
+const PROVIDER_APPLICATION_SELECT =
+  "id,user_id,full_name,display_name,credentials,specialty,bio,states_served,license_states,telehealth_enabled,organization_id,license_number,npi_number,is_accepting_patients,status,submitted_at,reviewed_at,reviewed_by_user_id,rejection_reason,created_at,updated_at,organizations(name,slug)";
 
 export async function fetchPublicProviders(supabase: SupabaseClient) {
   const { data, error } = await supabase
@@ -54,6 +83,48 @@ export async function fetchAllProvidersForAdmin(supabase: SupabaseClient) {
 
   if (error) throw error;
   return ((data ?? []) as ProviderRow[]).map(normalizeProviderRow);
+}
+
+export async function fetchProviderApplicationByUserId(supabase: SupabaseClient, userId: string) {
+  const { data, error } = await supabase
+    .from("provider_applications")
+    .select(PROVIDER_APPLICATION_SELECT)
+    .eq("user_id", userId)
+    .maybeSingle();
+
+  if (error) throw error;
+  if (!data) return null;
+
+  const activeProvider = await fetchProviderByUserId(supabase, userId).catch(() => null);
+  return normalizeProviderApplicationRow(data as ProviderApplicationRow, activeProvider);
+}
+
+export async function fetchProviderApplicationsForAdmin(supabase: SupabaseClient) {
+  const { data, error } = await supabase
+    .from("provider_applications")
+    .select(PROVIDER_APPLICATION_SELECT)
+    .order("submitted_at", { ascending: false })
+    .order("created_at", { ascending: false });
+
+  if (error) throw error;
+  const applicationRows = (data ?? []) as ProviderApplicationRow[];
+  const userIds = Array.from(new Set(applicationRows.map((row) => row.user_id)));
+  const activeProviderMap = new Map<string, ProviderDirectoryRecord>();
+
+  if (userIds.length > 0) {
+    const { data: providerRows, error: providerError } = await supabase
+      .from("providers")
+      .select(PROVIDER_SELECT)
+      .in("user_id", userIds);
+
+    if (providerError) throw providerError;
+
+    for (const row of (providerRows ?? []) as ProviderRow[]) {
+      activeProviderMap.set(row.user_id, normalizeProviderRow(row));
+    }
+  }
+
+  return applicationRows.map((row) => normalizeProviderApplicationRow(row, activeProviderMap.get(row.user_id) ?? null));
 }
 
 export async function fetchProviderBySlug(supabase: SupabaseClient, slug: string) {
@@ -120,6 +191,25 @@ export function getProviderVerificationMessage(provider: ProviderDirectoryRecord
   }
 }
 
+export function getProviderApplicationMessage(application: ProviderApplicationRecord | null | undefined) {
+  if (!application) return "Complete your provider profile to begin verification.";
+
+  switch (application.status) {
+    case "pending":
+      return "Your provider application is under review. Public listing and bookings will activate after approval.";
+    case "rejected":
+      return application.rejection_reason || "Your application was not approved at this time. Review the notes and update your information to resubmit.";
+    case "approved":
+      return "Your provider application has been approved.";
+    default:
+      return "Complete your provider profile to begin verification.";
+  }
+}
+
+export function hasActiveProviderAccess(provider: ProviderDirectoryRecord | null | undefined) {
+  return Boolean(provider && (provider.verification_status === "verified" || provider.verification_status === "suspended"));
+}
+
 function normalizeProviderRow(row: ProviderRow): ProviderDirectoryRecord {
   const organization = Array.isArray(row.organizations) ? row.organizations[0] ?? null : row.organizations ?? null;
   const normalizedSlug = slugifyProviderName(row.slug ?? row.display_name);
@@ -148,6 +238,39 @@ function normalizeProviderRow(row: ProviderRow): ProviderDirectoryRecord {
     onboarding_completed: row.onboarding_completed ?? false,
     is_accepting_patients: row.is_accepting_patients ?? false,
     organization: organization ? { name: organization.name, slug: organization.slug ?? null } : null,
+  };
+}
+
+function normalizeProviderApplicationRow(
+  row: ProviderApplicationRow,
+  activeProvider: ProviderDirectoryRecord | null
+): ProviderApplicationRecord {
+  const organization = Array.isArray(row.organizations) ? row.organizations[0] ?? null : row.organizations ?? null;
+
+  return {
+    id: row.id,
+    user_id: row.user_id,
+    full_name: row.full_name,
+    display_name: row.display_name,
+    credentials: row.credentials,
+    specialty: row.specialty,
+    bio: row.bio,
+    states_served: row.states_served ?? [],
+    license_states: row.license_states ?? [],
+    telehealth_enabled: row.telehealth_enabled ?? true,
+    organization_id: row.organization_id ?? null,
+    license_number: row.license_number,
+    npi_number: row.npi_number,
+    is_accepting_patients: row.is_accepting_patients ?? false,
+    status: row.status ?? "pending",
+    submitted_at: row.submitted_at,
+    reviewed_at: row.reviewed_at,
+    reviewed_by_user_id: row.reviewed_by_user_id,
+    rejection_reason: row.rejection_reason,
+    created_at: row.created_at,
+    updated_at: row.updated_at,
+    organization: organization ? { name: organization.name, slug: organization.slug ?? null } : null,
+    active_provider: activeProvider,
   };
 }
 

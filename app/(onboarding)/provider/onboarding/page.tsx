@@ -2,7 +2,12 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import ProviderOnboardingForm from "./ProviderOnboardingForm";
-import { fetchProviderByUserId, getProviderVerificationMessage } from "@/lib/carebridge/providers";
+import {
+  fetchProviderApplicationByUserId,
+  fetchProviderByUserId,
+  getProviderApplicationMessage,
+  getProviderVerificationMessage,
+} from "@/lib/carebridge/providers";
 
 export default async function ProviderOnboardingPage() {
   const supabase = await createClient();
@@ -12,10 +17,14 @@ export default async function ProviderOnboardingPage() {
 
   if (!user) redirect("/login?next=/providers/join/apply");
 
-  const [provider, organizations] = await Promise.all([
+  const [provider, application, organizations] = await Promise.all([
     fetchProviderByUserId(supabase, user.id),
+    fetchProviderApplicationByUserId(supabase, user.id),
     supabase.from("organizations").select("id,name").order("name", { ascending: true }),
   ]);
+
+  const statusLabel = provider?.verification_status ?? application?.status ?? "draft";
+  const statusMessage = provider ? getProviderVerificationMessage(provider) : getProviderApplicationMessage(application);
 
   return (
     <main className="shell py-8 sm:py-12">
@@ -30,22 +39,23 @@ export default async function ProviderOnboardingPage() {
             <div className="text-sm font-semibold uppercase tracking-[0.18em] text-[var(--accent-strong)]">
               Current status
             </div>
-            <div className="mt-2 text-xl font-semibold capitalize">{provider?.verification_status ?? "draft"}</div>
-            <p className="mt-2 text-sm leading-6 muted">{getProviderVerificationMessage(provider)}</p>
-            {provider?.rejection_reason ? (
+            <div className="mt-2 text-xl font-semibold capitalize">{statusLabel}</div>
+            <p className="mt-2 text-sm leading-6 muted">{statusMessage}</p>
+            {(application?.rejection_reason || provider?.rejection_reason) ? (
               <p className="mt-3 rounded-2xl border border-[var(--border)] bg-white/72 p-3 text-sm leading-6">
-                {provider.rejection_reason}
+                {application?.rejection_reason ?? provider?.rejection_reason}
               </p>
             ) : null}
           </div>
           <div className="mt-6 flex flex-wrap gap-3">
-            <Link href="/login?next=/provider" className="btn-secondary">
-              Sign in to provider workspace
+            <Link href="/provider" className="btn-secondary">
+              Open provider status page
             </Link>
           </div>
         </section>
 
         <ProviderOnboardingForm
+          application={application}
           provider={provider}
           organizations={(organizations.data ?? []) as Array<{ id: string; name: string }>}
         />
