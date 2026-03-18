@@ -8,7 +8,7 @@ type ProviderRow = {
   user_id: string;
   organization_id?: string | null;
   slug: string | null;
-  display_name: string;
+  display_name: string | null;
   credentials: string | null;
   specialty: string | null;
   bio: string | null;
@@ -72,7 +72,9 @@ export async function fetchPublicProviders(supabase: SupabaseClient) {
     throw error;
   }
 
-  return ((data ?? []) as ProviderRow[]).map(normalizeProviderRow);
+  return ((data ?? []) as ProviderRow[])
+    .map((row) => normalizeProviderRow(row, { requirePublicProfile: true }))
+    .filter((provider): provider is ProviderDirectoryRecord => Boolean(provider));
 }
 
 export async function fetchAllProvidersForAdmin(supabase: SupabaseClient) {
@@ -82,7 +84,9 @@ export async function fetchAllProvidersForAdmin(supabase: SupabaseClient) {
     .order("created_at", { ascending: false });
 
   if (error) throw error;
-  return ((data ?? []) as ProviderRow[]).map(normalizeProviderRow);
+  return ((data ?? []) as ProviderRow[])
+    .map((row) => normalizeProviderRow(row))
+    .filter((provider): provider is ProviderDirectoryRecord => Boolean(provider));
 }
 
 export async function fetchProviderApplicationByUserId(supabase: SupabaseClient, userId: string) {
@@ -120,7 +124,10 @@ export async function fetchProviderApplicationsForAdmin(supabase: SupabaseClient
     if (providerError) throw providerError;
 
     for (const row of (providerRows ?? []) as ProviderRow[]) {
-      activeProviderMap.set(row.user_id, normalizeProviderRow(row));
+      const normalizedProvider = normalizeProviderRow(row);
+      if (normalizedProvider) {
+        activeProviderMap.set(row.user_id, normalizedProvider);
+      }
     }
   }
 
@@ -210,34 +217,43 @@ export function hasActiveProviderAccess(provider: ProviderDirectoryRecord | null
   return Boolean(provider && (provider.verification_status === "verified" || provider.verification_status === "suspended"));
 }
 
-function normalizeProviderRow(row: ProviderRow): ProviderDirectoryRecord {
+function normalizeProviderRow(
+  row: ProviderRow,
+  options?: { requirePublicProfile?: boolean }
+): ProviderDirectoryRecord | null {
   const organization = Array.isArray(row.organizations) ? row.organizations[0] ?? null : row.organizations ?? null;
-  const normalizedSlug = slugifyProviderName(row.slug ?? row.display_name);
+  const displayName = normalizeOptionalText(row.display_name);
+  const normalizedSlug = slugifyProviderName(row.slug ?? displayName ?? "");
+  const verificationStatus = row.verification_status ?? "draft";
+
+  if (options?.requirePublicProfile && (verificationStatus !== "verified" || !displayName || !normalizedSlug)) {
+    return null;
+  }
 
   return {
     id: row.id,
     user_id: row.user_id,
     organization_id: row.organization_id ?? null,
-    slug: normalizedSlug,
-    display_name: row.display_name,
-    credentials: row.credentials,
-    specialty: row.specialty,
-    bio: row.bio,
-    states_served: row.states_served ?? [],
-    license_states: row.license_states ?? [],
+    slug: normalizedSlug || `provider-${row.id.slice(0, 8)}`,
+    display_name: displayName || "CareBridge Provider",
+    credentials: normalizeOptionalText(row.credentials),
+    specialty: normalizeOptionalText(row.specialty),
+    bio: normalizeOptionalText(row.bio),
+    states_served: normalizeStringArray(row.states_served),
+    license_states: normalizeStringArray(row.license_states),
     telehealth_enabled: row.telehealth_enabled ?? false,
-    areas_of_care: row.areas_of_care ?? [],
-    visit_types: row.visit_types ?? [],
-    verification_status: row.verification_status ?? "draft",
+    areas_of_care: normalizeStringArray(row.areas_of_care),
+    visit_types: normalizeStringArray(row.visit_types),
+    verification_status: verificationStatus,
     verification_submitted_at: row.verification_submitted_at,
     verified_at: row.verified_at,
     verified_by_user_id: row.verified_by_user_id,
-    rejection_reason: row.rejection_reason,
-    license_number: row.license_number,
-    npi_number: row.npi_number,
+    rejection_reason: normalizeOptionalText(row.rejection_reason),
+    license_number: normalizeOptionalText(row.license_number),
+    npi_number: normalizeOptionalText(row.npi_number),
     onboarding_completed: row.onboarding_completed ?? false,
     is_accepting_patients: row.is_accepting_patients ?? false,
-    organization: organization ? { name: organization.name, slug: organization.slug ?? null } : null,
+    organization: organization ? { name: normalizeOptionalText(organization.name), slug: normalizeOptionalText(organization.slug) } : null,
   };
 }
 
@@ -276,4 +292,18 @@ function normalizeProviderApplicationRow(
 
 export function slugifyProviderName(value: string) {
   return value.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "");
+}
+
+function normalizeOptionalText(value: string | null | undefined) {
+  if (typeof value !== "string") return null;
+  const normalized = value.trim();
+  return normalized.length > 0 ? normalized : null;
+}
+
+function normalizeStringArray(value: string[] | null | undefined) {
+  if (!Array.isArray(value)) return [];
+
+  return value
+    .map((item) => (typeof item === "string" ? item.trim() : ""))
+    .filter((item): item is string => item.length > 0);
 }
