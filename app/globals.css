@@ -70,7 +70,7 @@ textarea {
 
 @layer components {
   .shell {
-    @apply mx-auto w-full max-w-[96rem] px-5 sm:px-7 lg:px-10;
+    @apply mx-auto w-full max-w-[108rem] px-5 sm:px-7 lg:px-10 xl:px-12;
   }
 
   .panel {

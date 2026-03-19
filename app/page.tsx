@@ -1,3 +1,4 @@
+import Image from "next/image";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
 
@@ -30,9 +31,18 @@ export default async function HomePage() {
   } = await supabase.auth.getUser();
 
   return (
-    <main className="shell space-y-16 py-8 sm:space-y-20 sm:py-12">
-      <section className="grid gap-12 lg:grid-cols-[minmax(0,1.05fr)_minmax(360px,0.95fr)] lg:items-center">
-        <div className="max-w-3xl">
+    <main className="shell space-y-18 py-6 sm:space-y-24 sm:py-8">
+      <section className="relative grid gap-14 lg:grid-cols-[minmax(0,1.12fr)_minmax(420px,0.88fr)] lg:items-start xl:gap-20">
+        <div className="max-w-4xl pt-2 lg:pt-[8rem]">
+          <div className="absolute left-[-3.15rem] top-[-8.65rem] hidden h-[20rem] w-[38rem] overflow-hidden lg:block xl:h-[22rem] xl:w-[41rem]">
+            <Image
+              src="/images/carebridge-logo.png"
+              alt="CareBridge"
+              width={1820}
+              height={560}
+              className="h-[21rem] w-auto max-w-none -translate-x-[1.15rem] -translate-y-[1.05rem] object-contain xl:h-[23.5rem] xl:-translate-x-[1.45rem] xl:-translate-y-[1.3rem]"
+            />
+          </div>
           <h1 className="hero-wordmark text-5xl font-semibold tracking-[-0.04em] sm:text-6xl lg:text-7xl">
             A calmer way to connect people, providers, and care workflows.
           </h1>
@@ -60,10 +70,10 @@ export default async function HomePage() {
           </div>
         </div>
 
-        <div className="relative min-h-[30rem] overflow-hidden rounded-[18px] border border-[rgba(31,111,91,0.14)] bg-[linear-gradient(160deg,rgba(31,111,91,0.12),rgba(79,182,168,0.08)_48%,rgba(255,255,255,0.62)_100%)] px-8 py-8 shadow-[0_24px_60px_rgba(31,77,57,0.08)]">
+        <div className="relative min-h-[32rem] overflow-hidden rounded-[20px] bg-[linear-gradient(160deg,rgba(31,111,91,0.12),rgba(79,182,168,0.08)_48%,rgba(255,255,255,0.62)_100%)] px-8 py-8 shadow-[0_24px_60px_rgba(31,77,57,0.08)] xl:px-10 xl:py-10">
           <div className="absolute inset-0 bg-[radial-gradient(circle_at_15%_20%,rgba(79,182,168,0.22),transparent_35%),radial-gradient(circle_at_85%_25%,rgba(109,190,69,0.18),transparent_28%),radial-gradient(circle_at_50%_85%,rgba(31,111,91,0.14),transparent_32%)]" />
           <div className="relative grid gap-6">
-            <div className="inline-panel px-5 py-4 backdrop-blur">
+            <div className="bg-[rgba(255,252,246,0.8)] px-5 py-4 backdrop-blur-sm rounded-[16px]">
               <div className="text-xs font-semibold uppercase tracking-[0.18em] text-[var(--accent-strong)]">
                 Platform focus
               </div>
@@ -72,7 +82,7 @@ export default async function HomePage() {
               </div>
             </div>
 
-            <div className="ml-auto grid w-full max-w-[20rem] gap-3">
+            <div className="grid w-full gap-3 sm:grid-cols-2">
               <div className="metric-tile">
                 <div className="text-xs font-semibold uppercase tracking-[0.18em] text-[var(--accent-strong)]">
                   Patients
@@ -89,7 +99,7 @@ export default async function HomePage() {
 
             <div className="mt-10 grid gap-4 lg:grid-cols-3">
               {platformPillars.map((pillar, index) => (
-                <div key={pillar.title} className="inline-panel px-4 py-4">
+                <div key={pillar.title} className="bg-[rgba(255,252,246,0.72)] px-4 py-4 rounded-[16px]">
                   <div className="text-xs font-semibold uppercase tracking-[0.18em] text-[var(--accent-strong)]">
                     0{index + 1}
                   </div>

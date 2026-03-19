@@ -79,23 +79,6 @@ export default function SiteChrome({ children, isAuthenticated, userEmail }: Sit
   return (
     <div className="relative min-h-screen bg-[var(--background)]">
       <div className="absolute inset-x-0 top-0 -z-10 h-[34rem] bg-[radial-gradient(circle_at_top_left,rgba(79,182,168,0.18),transparent_35%),radial-gradient(circle_at_top_right,rgba(109,190,69,0.14),transparent_28%),linear-gradient(180deg,rgba(255,255,255,0.6),transparent_70%)]" />
-      {isHomePage ? (
-        <Link
-          href="/"
-          aria-label="CareBridge home"
-          className="pointer-events-auto absolute left-5 top-5 z-30 hidden xl:block"
-        >
-          <div className="flex h-[10.5rem] w-[24rem] items-start">
-            <Image
-              src="/images/carebridge-logo.png"
-              alt="CareBridge"
-              width={560}
-              height={180}
-              className="h-[8.5rem] w-auto object-contain drop-shadow-[0_18px_34px_rgba(31,77,57,0.12)]"
-            />
-          </div>
-        </Link>
-      ) : null}
 
       <header className="sticky top-0 z-40">
         <div
@@ -108,21 +91,27 @@ export default function SiteChrome({ children, isAuthenticated, userEmail }: Sit
           <div className="shell py-5">
             <nav
               aria-label="Primary"
-              className={`flex items-center justify-between gap-8 ${isHomePage ? "xl:pl-[24rem]" : ""}`}
+              className={`flex items-center justify-between gap-6 lg:grid lg:items-center lg:gap-10 ${
+                isHomePage ? "lg:grid-cols-[1fr_auto_1fr]" : "lg:grid-cols-[auto_1fr_auto]"
+              }`}
             >
-              <Link href="/" className="min-w-0">
-                <div className="flex items-center">
-                  <Image
-                    src="/images/carebridge-logo.png"
-                    alt="CareBridge"
-                    width={320}
-                    height={88}
-                    className={`w-auto object-contain xl:hidden ${isHomePage ? "h-12 sm:h-14" : "h-16 sm:h-20"}`}
-                  />
-                </div>
-              </Link>
+              {isHomePage ? (
+                <div className="hidden lg:block lg:min-h-[1px]" aria-hidden="true" />
+              ) : (
+                <Link href="/" className="min-w-0 lg:justify-self-start">
+                  <div className="flex items-center">
+                    <Image
+                      src="/images/carebridge-logo.png"
+                      alt="CareBridge"
+                      width={320}
+                      height={88}
+                      className="h-14 w-auto object-contain sm:h-16"
+                    />
+                  </div>
+                </Link>
+              )}
 
-              <div className="hidden items-center gap-7 lg:flex">
+              <div className="hidden items-center justify-center gap-7 lg:flex xl:gap-9 lg:justify-self-center">
                 {PUBLIC_NAV_LINKS.map((link) => {
                   const active = pathname === link.href;
                   return (
@@ -139,7 +128,7 @@ export default function SiteChrome({ children, isAuthenticated, userEmail }: Sit
                 })}
               </div>
 
-              <div className="hidden items-center gap-3 lg:flex">
+              <div className="hidden items-center gap-3 lg:flex lg:justify-self-end">
                 {isAuthenticated ? (
                   <>
                     <Link href="/portal" className="btn-primary px-5 py-3">

@@ -14,6 +14,7 @@ export const PUBLIC_NAV_LINKS = [
   { href: "/providers", label: "Providers" },
   { href: "/resources", label: "Resources" },
   { href: "/community", label: "Community" },
+  { href: "/recipes", label: "Recipes" },
   { href: "/faq", label: "FAQ" },
   { href: "/contact", label: "Contact" },
 ];
