@@ -59,11 +59,12 @@ export default function SiteChrome({ children, isAuthenticated, userEmail }: Sit
   const pathname = usePathname();
   const [menuOpen, setMenuOpen] = useState(false);
   const [scrolled, setScrolled] = useState(false);
+  const isHomePage = pathname === "/";
   const hideFooter = FOOTERLESS_PREFIXES.some((prefix) => pathname === prefix || pathname.startsWith(`${prefix}/`));
 
   useEffect(() => {
     function onScroll() {
-      setScrolled(window.scrollY > 12);
+      setScrolled(window.scrollY > 8);
     }
 
     onScroll();
@@ -76,155 +77,151 @@ export default function SiteChrome({ children, isAuthenticated, userEmail }: Sit
   }
 
   return (
-    <div className="relative">
-      <div className="absolute inset-x-0 top-0 -z-10 h-[380px] bg-[radial-gradient(circle_at_top,_rgba(255,255,255,0.88),_transparent_70%)]" />
+    <div className="relative min-h-screen bg-[var(--background)]">
+      <div className="absolute inset-x-0 top-0 -z-10 h-[34rem] bg-[radial-gradient(circle_at_top_left,rgba(79,182,168,0.18),transparent_35%),radial-gradient(circle_at_top_right,rgba(109,190,69,0.14),transparent_28%),linear-gradient(180deg,rgba(255,255,255,0.6),transparent_70%)]" />
+      {isHomePage ? (
+        <Link
+          href="/"
+          aria-label="CareBridge home"
+          className="pointer-events-auto absolute left-5 top-5 z-30 hidden xl:block"
+        >
+          <div className="flex h-[10.5rem] w-[24rem] items-start">
+            <Image
+              src="/images/carebridge-logo.png"
+              alt="CareBridge"
+              width={560}
+              height={180}
+              className="h-[8.5rem] w-auto object-contain drop-shadow-[0_18px_34px_rgba(31,77,57,0.12)]"
+            />
+          </div>
+        </Link>
+      ) : null}
 
       <header className="sticky top-0 z-40">
         <div
-          className={`transition-all duration-200 ${
+          className={`transition-all duration-300 ${
             scrolled
-              ? "border-b border-[var(--border)] bg-[rgba(248,244,236,0.94)] shadow-[0_16px_36px_rgba(64,53,33,0.12)] backdrop-blur-xl"
-              : "bg-[rgba(248,244,236,0.88)]"
+              ? "border-b border-[var(--border)] bg-[rgba(245,243,238,0.92)] shadow-[0_18px_36px_rgba(31,77,57,0.08)] backdrop-blur-xl"
+              : "bg-transparent"
           }`}
         >
-          <div className="shell py-3 sm:py-4">
-            <nav aria-label="Primary">
-              <div className="flex items-center justify-between gap-4">
-                <Link href="/" className="min-w-0">
-                  <div className="flex items-center gap-3">
-                    <Image
-                      src="/images/carebridge-logo.png"
-                      alt="CareBridge"
-                      width={60}
-                      height={60}
-                      className="h-14 w-14 rounded-[12px] object-contain"
-                    />
-                    <div className="min-w-0">
-                      <div className="hero-tagline text-[11px] font-semibold uppercase tracking-[0.22em] text-[var(--accent-strong)]">
-                        Making Healthcare Easier to Reach
-                      </div>
-                    <div className="hero-wordmark mt-1 text-3xl font-semibold sm:text-[2.4rem]">{BRAND.name}</div>
-                    </div>
-                  </div>
-                </Link>
-
-                <div className="hidden items-center gap-1 text-sm lg:flex">
-                  {PUBLIC_NAV_LINKS.map((link) => {
-                    const active = pathname === link.href;
-                    return (
-                      <Link
-                        key={link.href}
-                        href={link.href}
-                        className={`rounded-full px-4 py-2 outline-none hover:bg-white/70 hover:text-[var(--accent-strong)] focus-visible:ring-2 focus-visible:ring-[var(--accent)] ${
-                          active ? "bg-white/80 text-[var(--accent-strong)] shadow-[inset_0_-2px_0_var(--accent)]" : "text-[rgba(43,36,28,0.82)]"
-                        }`}
-                      >
-                        {link.label}
-                      </Link>
-                    );
-                  })}
+          <div className="shell py-5">
+            <nav
+              aria-label="Primary"
+              className={`flex items-center justify-between gap-8 ${isHomePage ? "xl:pl-[24rem]" : ""}`}
+            >
+              <Link href="/" className="min-w-0">
+                <div className="flex items-center">
+                  <Image
+                    src="/images/carebridge-logo.png"
+                    alt="CareBridge"
+                    width={320}
+                    height={88}
+                    className={`w-auto object-contain xl:hidden ${isHomePage ? "h-12 sm:h-14" : "h-16 sm:h-20"}`}
+                  />
                 </div>
+              </Link>
 
-                <div className="hidden items-center gap-3 lg:flex">
+              <div className="hidden items-center gap-7 lg:flex">
+                {PUBLIC_NAV_LINKS.map((link) => {
+                  const active = pathname === link.href;
+                  return (
+                    <Link
+                      key={link.href}
+                      href={link.href}
+                      className={`text-sm font-medium transition-colors hover:text-[var(--accent-strong)] ${
+                        active ? "text-[var(--accent-strong)]" : "text-[rgba(43,36,28,0.78)]"
+                      }`}
+                    >
+                      {link.label}
+                    </Link>
+                  );
+                })}
+              </div>
+
+              <div className="hidden items-center gap-3 lg:flex">
+                {isAuthenticated ? (
+                  <>
+                    <Link href="/portal" className="btn-primary px-5 py-3">
+                      Open Portal
+                    </Link>
+                    {userEmail ? (
+                      <div className="inline-panel px-4 py-2 text-sm muted">{userEmail}</div>
+                    ) : null}
+                    <SignOutButton />
+                  </>
+                ) : (
+                  <>
+                    <Link href="/login" className="text-sm font-semibold text-[var(--foreground)] hover:text-[var(--accent-strong)]">
+                      Sign in
+                    </Link>
+                    <Link href="/signup" className="btn-primary px-5 py-3">
+                      Get Started
+                    </Link>
+                  </>
+                )}
+              </div>
+
+              <button
+                type="button"
+                aria-expanded={menuOpen}
+                aria-controls="mobile-site-menu"
+                aria-label={menuOpen ? "Close navigation menu" : "Open navigation menu"}
+                onClick={() => setMenuOpen((open) => !open)}
+                className="inline-flex h-12 w-12 items-center justify-center rounded-[14px] border border-[var(--border)] bg-white/70 lg:hidden"
+              >
+                <span className="flex w-5 flex-col gap-1.5">
+                  <span className={`block h-0.5 rounded-full bg-[var(--foreground)] transition-transform duration-200 ${menuOpen ? "translate-y-2 rotate-45" : ""}`} />
+                  <span className={`block h-0.5 rounded-full bg-[var(--foreground)] transition-opacity duration-200 ${menuOpen ? "opacity-0" : ""}`} />
+                  <span className={`block h-0.5 rounded-full bg-[var(--foreground)] transition-transform duration-200 ${menuOpen ? "-translate-y-2 -rotate-45" : ""}`} />
+                </span>
+              </button>
+            </nav>
+
+            <div
+              id="mobile-site-menu"
+              className={`overflow-hidden transition-all duration-300 lg:hidden ${
+                menuOpen ? "mt-5 max-h-[32rem] opacity-100" : "max-h-0 opacity-0"
+              }`}
+            >
+              <div className="inline-panel space-y-3 px-4 py-4">
+                {PUBLIC_NAV_LINKS.map((link) => (
+                  <Link
+                    key={link.href}
+                    href={link.href}
+                    onClick={() => setMenuOpen(false)}
+                    className="block py-2 text-sm font-medium text-[rgba(43,36,28,0.82)]"
+                  >
+                    {link.label}
+                  </Link>
+                ))}
+                <div className="section-rule mt-2 flex flex-col gap-3">
                   {isAuthenticated ? (
                     <>
-                      <Link href="/portal" className="btn-primary">
-                        Open portal
+                      <Link href="/portal" onClick={() => setMenuOpen(false)} className="btn-primary">
+                        Open Portal
                       </Link>
-                      {userEmail ? <span className="rounded-[14px] bg-white/70 px-4 py-2 text-sm muted">{userEmail}</span> : null}
+                      {userEmail ? <div className="inline-panel px-4 py-3 text-sm muted">{userEmail}</div> : null}
                       <SignOutButton />
                     </>
                   ) : (
                     <>
-                      <Link
-                        href="/login"
-                        className="rounded-[14px] px-4 py-2 text-sm font-semibold outline-none hover:bg-white/70 focus-visible:ring-2 focus-visible:ring-[var(--accent)]"
-                      >
+                      <Link href="/login" onClick={() => setMenuOpen(false)} className="text-sm font-semibold text-[var(--foreground)]">
                         Sign in
                       </Link>
-                      <Link href="/signup" className="btn-primary shadow-[0_12px_24px_rgba(31,77,57,0.18)]">
-                        Get started
+                      <Link href="/signup" onClick={() => setMenuOpen(false)} className="btn-primary">
+                        Get Started
                       </Link>
                     </>
                   )}
                 </div>
-
-                <div className="flex w-full items-center justify-between gap-3 lg:hidden">
-                  <div className="min-w-0">
-                    <div className="text-xs font-semibold uppercase tracking-[0.18em] text-[var(--accent-strong)]">Menu</div>
-                    <div className="mt-1 text-sm muted">Public pages and care access</div>
-                  </div>
-                  <button
-                    type="button"
-                    aria-expanded={menuOpen}
-                    aria-controls="mobile-site-menu"
-                    aria-label={menuOpen ? "Close navigation menu" : "Open navigation menu"}
-                    onClick={() => setMenuOpen((open) => !open)}
-                    className="inline-flex h-11 w-11 items-center justify-center rounded-[14px] border border-[var(--border)] bg-white/72 outline-none hover:bg-white focus-visible:ring-2 focus-visible:ring-[var(--accent)]"
-                  >
-                    <span className="sr-only">Toggle navigation</span>
-                    <span className="flex w-5 flex-col gap-1.5">
-                      <span className={`block h-0.5 rounded-full bg-[var(--foreground)] transition-transform duration-200 ${menuOpen ? "translate-y-2 rotate-45" : ""}`} />
-                      <span className={`block h-0.5 rounded-full bg-[var(--foreground)] transition-opacity duration-200 ${menuOpen ? "opacity-0" : ""}`} />
-                      <span className={`block h-0.5 rounded-full bg-[var(--foreground)] transition-transform duration-200 ${menuOpen ? "-translate-y-2 -rotate-45" : ""}`} />
-                    </span>
-                  </button>
-                </div>
               </div>
-
-              <div
-                id="mobile-site-menu"
-                className={`overflow-hidden transition-all duration-200 lg:hidden ${
-                  menuOpen ? "mt-4 max-h-[520px] opacity-100" : "max-h-0 opacity-0"
-                }`}
-              >
-                <div className="space-y-2 border-t border-[var(--border)] pt-4">
-                  <div className="grid gap-2">
-                    {PUBLIC_NAV_LINKS.map((link) => {
-                      const active = pathname === link.href;
-                      return (
-                        <Link
-                          key={link.href}
-                          href={link.href}
-                          onClick={() => setMenuOpen(false)}
-                          className={`rounded-2xl px-4 py-3 text-sm font-medium outline-none hover:bg-white/70 focus-visible:ring-2 focus-visible:ring-[var(--accent)] ${
-                            active ? "bg-white/80 text-[var(--accent-strong)]" : ""
-                          }`}
-                        >
-                          {link.label}
-                        </Link>
-                      );
-                    })}
-                  </div>
-
-                  <div className="flex flex-col gap-2 pt-2">
-                    {isAuthenticated ? (
-                      <>
-                        <Link href="/portal" onClick={() => setMenuOpen(false)} className="btn-primary">
-                          Open portal
-                        </Link>
-                        {userEmail ? <div className="rounded-2xl bg-white/72 px-4 py-3 text-sm muted">{userEmail}</div> : null}
-                        <SignOutButton />
-                      </>
-                    ) : (
-                      <>
-                        <Link href="/login" onClick={() => setMenuOpen(false)} className="rounded-full px-4 py-3 text-sm font-semibold text-center outline-none hover:bg-white/70 focus-visible:ring-2 focus-visible:ring-[var(--accent)]">
-                          Sign in
-                        </Link>
-                        <Link href="/signup" onClick={() => setMenuOpen(false)} className="btn-primary">
-                          Get started
-                        </Link>
-                      </>
-                    )}
-                  </div>
-                </div>
-              </div>
-            </nav>
+            </div>
           </div>
         </div>
       </header>
 
-      <main className={hideFooter ? "pb-0" : "pb-16"}>{children}</main>
+      <main className={hideFooter ? "pb-0" : "pb-20"}>{children}</main>
 
       {hideFooter ? null : (
         <footer className="shell pb-10">

@@ -1,34 +1,26 @@
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
-import { BRAND } from "@/lib/config/brand";
 
-const howItWorks = [
+const platformPillars = [
   {
-    title: "Find the right starting point",
-    body: "Browse providers, services, educational resources, and supportive wellness content before you ever log in.",
+    title: "Public guidance",
+    body: "Browse providers, resources, community discussions, and supportive wellness content before you ever create an account.",
   },
   {
-    title: "Get care with less friction",
-    body: "Use scheduling and telehealth-ready workflows designed to cut down on commuting, confusion, and back-and-forth.",
+    title: "Care access",
+    body: "Move from discovery to scheduling and telehealth-ready visit workflows without juggling disconnected systems.",
   },
   {
-    title: "Stay connected over time",
-    body: "Return to your portal for appointments, messages, forms, resources, and community support.",
+    title: "Ongoing support",
+    body: "Return to one secure portal for messages, forms, summaries, reminders, and follow-up steps after the visit.",
   },
 ];
 
-const resourcePreview = [
-  "Patient-friendly educational resources",
-  "How to prepare for a telehealth visit",
-  "Questions to ask your provider",
-  "Recipes and wellness-support content where it helps",
-];
-
-const portalPreview = [
-  "Appointments and visit access",
-  "Messages and reminders",
-  "Forms, documents, and shared care prep",
-  "Saved resources and community participation",
+const featureHighlights = [
+  "Provider discovery and matching",
+  "Telehealth-ready appointments",
+  "Secure patient and provider portals",
+  "Forms, documents, and care summaries",
 ];
 
 export default async function HomePage() {
@@ -38,163 +30,95 @@ export default async function HomePage() {
   } = await supabase.auth.getUser();
 
   return (
-    <main className="shell space-y-10 py-6 sm:space-y-12 sm:py-10">
-      <section className="panel grid gap-8 overflow-hidden px-6 py-8 sm:px-8 lg:grid-cols-[1.08fr_0.92fr] lg:px-10 lg:py-12">
-        <div className="space-y-6">
-          <span className="eyebrow">{BRAND.tagline}</span>
-          <div className="space-y-4">
-            <h1 className="section-title max-w-4xl">Healthcare access that feels easier for patients and faster for providers.</h1>
-            <p className="max-w-2xl text-base leading-7 muted sm:text-lg">
-              {BRAND.name} brings together public health information, provider access, community support,
-              scheduling, and telehealth-ready workflows in one calmer platform. It is built to reduce friction,
-              not add more portal complexity.
-            </p>
-          </div>
-          <div className="flex flex-wrap gap-3">
-            <Link href="/providers" className="btn-primary">
-              Find a provider
-            </Link>
-            <Link href="/recipes" className="btn-secondary">
-              Browse public recipes
-            </Link>
-            <Link href={user ? "/portal" : "/signup"} className="btn-secondary">
-              {user ? "Open patient portal" : "Get started"}
-            </Link>
-          </div>
-          <div className="grid gap-3 sm:grid-cols-3">
-            <HeroStat title="Patients" body="Find care, prepare for visits, and stay connected in one place." />
-            <HeroStat title="Providers" body="Reach patients faster and reduce unnecessary workflow friction." />
-            <HeroStat title="Public support" body="Resources, articles, community, and wellness content stay accessible." />
-          </div>
-        </div>
-
-        <div className="panel-strong grid gap-4 px-6 py-6">
-          <div className="rounded-[24px] border border-[var(--border)] bg-[var(--accent-soft)]/45 px-5 py-5">
-            <div className="text-xs font-semibold uppercase tracking-[0.18em] text-[var(--accent-strong)]">
-              Telehealth-ready care
-            </div>
-            <div className="mt-3 text-2xl font-semibold">Care without the usual travel burden.</div>
-            <p className="mt-2 text-sm leading-6 muted">
-              Scheduling, preparation, messaging, and remote-visit workflows are designed to feel clear before the visit even starts.
-            </p>
-          </div>
-          <div className="rounded-[24px] border border-[var(--border)] bg-white/78 px-5 py-5">
-            <div className="text-xs font-semibold uppercase tracking-[0.18em] text-[var(--accent-strong)]">
-              Public and private by design
-            </div>
-            <div className="mt-3 text-2xl font-semibold">Browse openly. Manage care privately.</div>
-            <p className="mt-2 text-sm leading-6 muted">
-              Public resources, recipes, and provider discovery stay easy to browse, while personal care workflows stay protected behind secure access.
-            </p>
-          </div>
-        </div>
-      </section>
-
-      <section className="panel px-6 py-8 sm:px-8">
-        <div className="max-w-2xl">
-          <span className="eyebrow">How CareBridge works</span>
-          <h2 className="mt-4 text-3xl font-semibold">A bridge between public guidance and real care access.</h2>
-        </div>
-        <div className="mt-6 grid gap-4 lg:grid-cols-3">
-          {howItWorks.map((item) => (
-            <div key={item.title} className="rounded-[24px] border border-[var(--border)] bg-white/72 px-5 py-5">
-              <div className="text-xl font-semibold">{item.title}</div>
-              <p className="mt-2 text-sm leading-6 muted">{item.body}</p>
-            </div>
-          ))}
-        </div>
-      </section>
-
-      <section className="grid gap-4 lg:grid-cols-[1fr_1fr]">
-        <div className="panel px-6 py-6 sm:px-8">
-          <span className="eyebrow">Resources and wellness support</span>
-          <h2 className="mt-4 text-3xl font-semibold">Public information that helps people get oriented.</h2>
-          <div className="mt-4 space-y-3">
-            {resourcePreview.map((item) => (
-              <div key={item} className="rounded-[22px] border border-[var(--border)] bg-white/72 px-4 py-4 text-sm leading-6 muted">
-                {item}
-              </div>
-            ))}
-          </div>
-          <div className="mt-5">
-            <Link href="/resources" className="btn-secondary">
-              Browse resources
-            </Link>
-          </div>
-        </div>
-
-        <div className="panel px-6 py-6 sm:px-8">
-          <span className="eyebrow">Provider access</span>
-          <h2 className="mt-4 text-3xl font-semibold">Help patients reach the right care faster.</h2>
-          <p className="mt-3 text-sm leading-6 muted">
-            CareBridge supports provider discovery, scheduling, telehealth-ready visit flows, and future organization-based healthcare operations.
+    <main className="shell space-y-16 py-8 sm:space-y-20 sm:py-12">
+      <section className="grid gap-12 lg:grid-cols-[minmax(0,1.05fr)_minmax(360px,0.95fr)] lg:items-center">
+        <div className="max-w-3xl">
+          <h1 className="hero-wordmark text-5xl font-semibold tracking-[-0.04em] sm:text-6xl lg:text-7xl">
+            A calmer way to connect people, providers, and care workflows.
+          </h1>
+          <p className="mt-6 max-w-2xl text-lg leading-8 muted">
+            CareBridge brings together provider discovery, scheduling, telehealth-ready visits, follow-up
+            summaries, forms, and supportive health tools in one modern platform designed to reduce friction.
           </p>
-          <div className="mt-5 flex flex-wrap gap-3">
-            <Link href="/providers" className="btn-primary">
-              View providers
+
+          <div className="mt-8 flex flex-wrap gap-3">
+            <Link href={user ? "/portal" : "/signup"} className="btn-primary px-6 py-3.5">
+              {user ? "Open Portal" : "Get Started"}
             </Link>
-            <Link href="/services" className="btn-secondary">
-              Explore services
+            <Link href="/providers" className="btn-secondary px-6 py-3.5">
+              Find a Provider
             </Link>
           </div>
-        </div>
-      </section>
 
-      <section className="grid gap-4 lg:grid-cols-[0.95fr_1.05fr]">
-        <div className="panel px-6 py-6 sm:px-8">
-          <span className="eyebrow">Community</span>
-          <h2 className="mt-4 text-3xl font-semibold">Discussion, support, and moderated participation.</h2>
-          <p className="mt-3 text-sm leading-6 muted">
-            Community stays part of the product through patient discussion and future provider-authored guidance,
-            while staying clearly distinct from formal medical advice.
-          </p>
-          <div className="mt-5">
-            <Link href="/community" className="btn-secondary">
-              Explore community
-            </Link>
-          </div>
-        </div>
-
-        <div className="panel px-6 py-6 sm:px-8">
-          <span className="eyebrow">Patient portal preview</span>
-          <h2 className="mt-4 text-3xl font-semibold">The member portal keeps care steps connected.</h2>
-          <div className="mt-4 grid gap-3 sm:grid-cols-2">
-            {portalPreview.map((item) => (
-              <div key={item} className="rounded-[22px] border border-[var(--border)] bg-[var(--accent-soft)]/38 px-4 py-4 text-sm leading-6 muted">
-                {item}
+          <div className="mt-10 grid gap-4 border-t border-[var(--border)] pt-6 sm:grid-cols-2">
+            {featureHighlights.map((item) => (
+              <div key={item} className="flex items-start gap-3">
+                <span className="mt-1 h-2.5 w-2.5 rounded-full bg-[var(--health)]" />
+                <span className="text-sm leading-6 muted">{item}</span>
               </div>
             ))}
           </div>
         </div>
+
+        <div className="relative min-h-[30rem] overflow-hidden rounded-[18px] border border-[rgba(31,111,91,0.14)] bg-[linear-gradient(160deg,rgba(31,111,91,0.12),rgba(79,182,168,0.08)_48%,rgba(255,255,255,0.62)_100%)] px-8 py-8 shadow-[0_24px_60px_rgba(31,77,57,0.08)]">
+          <div className="absolute inset-0 bg-[radial-gradient(circle_at_15%_20%,rgba(79,182,168,0.22),transparent_35%),radial-gradient(circle_at_85%_25%,rgba(109,190,69,0.18),transparent_28%),radial-gradient(circle_at_50%_85%,rgba(31,111,91,0.14),transparent_32%)]" />
+          <div className="relative grid gap-6">
+            <div className="inline-panel px-5 py-4 backdrop-blur">
+              <div className="text-xs font-semibold uppercase tracking-[0.18em] text-[var(--accent-strong)]">
+                Platform focus
+              </div>
+              <div className="mt-3 text-2xl font-semibold">
+                Healthcare access that feels clear from the first click.
+              </div>
+            </div>
+
+            <div className="ml-auto grid w-full max-w-[20rem] gap-3">
+              <div className="metric-tile">
+                <div className="text-xs font-semibold uppercase tracking-[0.18em] text-[var(--accent-strong)]">
+                  Patients
+                </div>
+                <div className="mt-2 text-lg font-semibold">Find care, prepare for visits, and stay connected.</div>
+              </div>
+              <div className="metric-tile">
+                <div className="text-xs font-semibold uppercase tracking-[0.18em] text-[var(--accent-strong)]">
+                  Providers
+                </div>
+                <div className="mt-2 text-lg font-semibold">Manage appointments, notes, and follow-up from one workspace.</div>
+              </div>
+            </div>
+
+            <div className="mt-10 grid gap-4 lg:grid-cols-3">
+              {platformPillars.map((pillar, index) => (
+                <div key={pillar.title} className="inline-panel px-4 py-4">
+                  <div className="text-xs font-semibold uppercase tracking-[0.18em] text-[var(--accent-strong)]">
+                    0{index + 1}
+                  </div>
+                  <div className="mt-3 text-lg font-semibold">{pillar.title}</div>
+                  <p className="mt-2 text-sm leading-6 muted">{pillar.body}</p>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
       </section>
 
-      <section className="panel-strong px-6 py-8 sm:px-8">
-        <span className="eyebrow">Get started</span>
-        <h2 className="mt-4 text-3xl font-semibold">Make healthcare easier to reach.</h2>
-        <p className="mt-3 max-w-2xl text-sm leading-6 muted">
-          Browse providers, explore public resources, or sign up to use the patient portal and future telehealth workflows.
-        </p>
-        <div className="mt-6 flex flex-wrap gap-3">
-          <Link href="/providers" className="btn-primary">
-            Find a provider
-          </Link>
-          <Link href="/resources" className="btn-secondary">
-            Browse resources
-          </Link>
-          <Link href={user ? "/portal" : "/signup"} className="btn-secondary">
-            {user ? "Open portal" : "Create account"}
-          </Link>
+      <section className="workspace-section">
+        <div className="grid gap-10 lg:grid-cols-[1.1fr_0.9fr]">
+          <div>
+            <div className="text-[11px] font-semibold uppercase tracking-[0.18em] text-[var(--accent-strong)]">
+              Why CareBridge
+            </div>
+            <h2 className="mt-3 text-3xl font-semibold tracking-[-0.03em] sm:text-4xl">
+              Built for healthcare workflows, not generic portal clutter.
+            </h2>
+          </div>
+          <p className="text-sm leading-7 muted">
+            CareBridge is designed to make it easier for patients to find the right starting point, for providers to
+            run cleaner digital workflows, and for both sides to stay connected through preparation, visits, and
+            follow-up.
+          </p>
         </div>
       </section>
     </main>
-  );
-}
-
-function HeroStat({ title, body }: { title: string; body: string }) {
-  return (
-    <div className="rounded-[24px] border border-[var(--border)] bg-white/55 px-4 py-4">
-      <div className="font-semibold">{title}</div>
-      <div className="mt-1 text-sm leading-6 muted">{body}</div>
-    </div>
   );
 }
