@@ -1,9 +1,11 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createServerClient } from "@supabase/ssr";
+import { hasCurrentRequiredPolicyAcceptance } from "@/lib/carebridge/policy-acceptance";
 import { getRoleHomePath } from "@/lib/config/brand";
 import { Role } from "@/lib/auth/roles";
 
 const AUTH_PAGES = ["/login", "/signup"];
+const CONSENT_PAGE = "/consent";
 const PROTECTED_PREFIXES = ["/portal", "/provider", "/admin", "/settings", "/visit"];
 const LEGACY_REDIRECTS: Record<string, string> = {
   "/app": "/portal",
@@ -36,7 +38,10 @@ export async function proxy(request: NextRequest) {
     }
   }
 
-  const needsSessionCheck = matchesPrefix(pathname, PROTECTED_PREFIXES) || matchesPrefix(pathname, AUTH_PAGES);
+  const needsSessionCheck =
+    matchesPrefix(pathname, PROTECTED_PREFIXES) ||
+    matchesPrefix(pathname, AUTH_PAGES) ||
+    pathname === CONSENT_PAGE;
   if (!needsSessionCheck) {
     return NextResponse.next();
   }
@@ -70,7 +75,14 @@ export async function proxy(request: NextRequest) {
   }
 
   if (matchesPrefix(pathname, AUTH_PAGES) && user) {
+    if (!hasCurrentRequiredPolicyAcceptance(user)) {
+      return NextResponse.redirect(new URL(CONSENT_PAGE, request.url));
+    }
     return NextResponse.redirect(new URL(getRoleHomePath(role), request.url));
+  }
+
+  if (pathname === CONSENT_PAGE && !user) {
+    return NextResponse.redirect(new URL("/login", request.url));
   }
 
   if (matchesPrefix(pathname, PROTECTED_PREFIXES) && !user) {
@@ -79,6 +91,18 @@ export async function proxy(request: NextRequest) {
 
   if (matchesPrefix(pathname, PROTECTED_PREFIXES) && user && !user.email_confirmed_at) {
     return NextResponse.redirect(new URL("/verify", request.url));
+  }
+
+  if (user && !hasCurrentRequiredPolicyAcceptance(user) && matchesPrefix(pathname, PROTECTED_PREFIXES)) {
+    const consentUrl = new URL(CONSENT_PAGE, request.url);
+    const nextPath = pathname + request.nextUrl.search;
+    consentUrl.searchParams.set("next", nextPath);
+    return NextResponse.redirect(consentUrl);
+  }
+
+  if (pathname === CONSENT_PAGE && user && hasCurrentRequiredPolicyAcceptance(user)) {
+    const next = request.nextUrl.searchParams.get("next");
+    return NextResponse.redirect(new URL(next || getRoleHomePath(role), request.url));
   }
 
   const requiredRole = getRequiredAreaRole(pathname);
