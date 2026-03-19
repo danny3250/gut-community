@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { createNotification } from "@/lib/carebridge/notifications";
 import { upsertPatientFollowUpSummary } from "@/lib/carebridge/follow-ups";
-import { fetchProviderByUserId } from "@/lib/carebridge/providers";
+import { fetchProviderByUserId, isProviderVerified } from "@/lib/carebridge/providers";
 import { createClient } from "@/lib/supabase/server";
 
 export async function POST(request: Request) {
@@ -18,6 +18,9 @@ export async function POST(request: Request) {
   const provider = await fetchProviderByUserId(supabase, user.id);
   if (!provider) {
     return NextResponse.json({ error: "Only providers can manage patient follow-ups." }, { status: 403 });
+  }
+  if (!isProviderVerified(provider)) {
+    return NextResponse.json({ error: "Patient follow-ups are unavailable until provider verification is complete." }, { status: 403 });
   }
 
   const body = (await request.json()) as {

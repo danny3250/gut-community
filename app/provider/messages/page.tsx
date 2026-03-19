@@ -2,6 +2,7 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { listConversationsForUser } from "@/lib/carebridge/messages";
+import { fetchProviderByUserId, isProviderVerified } from "@/lib/carebridge/providers";
 
 export default async function ProviderMessagesPage() {
   const supabase = await createClient();
@@ -10,6 +11,10 @@ export default async function ProviderMessagesPage() {
   } = await supabase.auth.getUser();
 
   if (!user) redirect("/login");
+
+  const provider = await fetchProviderByUserId(supabase, user.id);
+  if (!provider) redirect("/portal");
+  if (!isProviderVerified(provider)) redirect("/provider");
 
   const conversations = await listConversationsForUser(supabase, user.id, "provider");
 

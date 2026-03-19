@@ -3,7 +3,7 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import { createClient } from "@/lib/supabase/server";
 import { createNotifications, type NotificationInput } from "@/lib/carebridge/notifications";
 import { syncPatientProviderRelationship } from "@/lib/carebridge/relationships";
-import { fetchProviderByUserId } from "@/lib/carebridge/providers";
+import { fetchProviderByUserId, isProviderVerified } from "@/lib/carebridge/providers";
 import { fetchProviderAppointmentById, updateAppointmentForProvider } from "@/lib/carebridge/appointments";
 
 type RouteContext = {
@@ -30,6 +30,9 @@ export async function POST(request: NextRequest, { params }: RouteContext) {
   const provider = await fetchProviderByUserId(supabase, user.id);
   if (!provider) {
     return NextResponse.json({ error: "Provider record not found." }, { status: 404 });
+  }
+  if (!isProviderVerified(provider)) {
+    return NextResponse.json({ error: "Appointment management is unavailable until provider verification is complete." }, { status: 403 });
   }
 
   const payload = (await request.json()) as StatusPayload;

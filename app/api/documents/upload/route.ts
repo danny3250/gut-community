@@ -5,6 +5,7 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import { createNotifications, type NotificationInput } from "@/lib/carebridge/notifications";
 import { fetchPatientByUserId } from "@/lib/carebridge/patients";
 import { fetchProviderById } from "@/lib/carebridge/providers";
+import { DOCUMENT_CATEGORIES } from "@/lib/carebridge/forms";
 
 export const runtime = "nodejs";
 
@@ -40,6 +41,10 @@ export async function POST(request: Request) {
 
   if (!(file instanceof File)) {
     return NextResponse.json({ error: "Missing file." }, { status: 400 });
+  }
+
+  if (!DOCUMENT_CATEGORIES.includes(category as (typeof DOCUMENT_CATEGORIES)[number])) {
+    return NextResponse.json({ error: "Invalid document category." }, { status: 400 });
   }
 
   if (!ALLOWED_MIME_TYPES.has(file.type)) {

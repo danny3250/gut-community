@@ -3,7 +3,7 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import { createClient } from "@/lib/supabase/server";
 import { createNotifications, type NotificationInput } from "@/lib/carebridge/notifications";
 import { syncPatientProviderRelationship } from "@/lib/carebridge/relationships";
-import { fetchProviderById, fetchProviderByUserId } from "@/lib/carebridge/providers";
+import { fetchProviderById, fetchProviderByUserId, isProviderVerified } from "@/lib/carebridge/providers";
 import { fetchPatientByUserId } from "@/lib/carebridge/patients";
 import {
   fetchPatientAppointmentById,
@@ -55,6 +55,9 @@ export async function POST(request: NextRequest, { params }: RouteContext) {
     const provider = await fetchProviderByUserId(supabase, user.id);
     if (!provider) {
       return NextResponse.json({ error: "Provider record not found." }, { status: 404 });
+    }
+    if (!isProviderVerified(provider)) {
+      return NextResponse.json({ error: "Rescheduling is unavailable until provider verification is complete." }, { status: 403 });
     }
 
     const appointment = await fetchProviderAppointmentById(supabase, provider.id, id);
@@ -116,6 +119,9 @@ export async function POST(request: NextRequest, { params }: RouteContext) {
   const provider = await fetchProviderById(supabase, appointment.provider_id);
   if (!provider) {
     return NextResponse.json({ error: "Provider not found." }, { status: 404 });
+  }
+  if (!isProviderVerified(provider)) {
+    return NextResponse.json({ error: "This provider is not currently available for rescheduling." }, { status: 403 });
   }
 
   if (patient.state && !provider.states_served.includes(patient.state)) {

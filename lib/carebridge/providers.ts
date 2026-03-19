@@ -301,7 +301,7 @@ export function getProviderApplicationMessage(application: ProviderApplicationRe
 }
 
 export function hasActiveProviderAccess(provider: ProviderDirectoryRecord | null | undefined) {
-  return Boolean(provider && (provider.verification_status === "verified" || provider.verification_status === "suspended"));
+  return Boolean(provider && provider.verification_status === "verified");
 }
 
 export function filterProviders(providers: ProviderDirectoryRecord[], filters: PublicProviderFilters = {}) {

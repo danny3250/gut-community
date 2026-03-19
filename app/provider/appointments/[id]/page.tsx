@@ -22,7 +22,7 @@ import {
 import { getConversationIdForAppointment } from "@/lib/carebridge/messages";
 import { fetchProviderVisitNoteForAppointment, fetchRecentProviderNotesForPatient } from "@/lib/carebridge/provider-notes";
 import { fetchProviderFollowUpForAppointment } from "@/lib/carebridge/follow-ups";
-import { fetchProviderByUserId } from "@/lib/carebridge/providers";
+import { fetchProviderByUserId, isProviderVerified } from "@/lib/carebridge/providers";
 import LaunchVisitButton from "./LaunchVisitButton";
 
 type ProviderAppointmentDetailPageProps = {
@@ -42,6 +42,7 @@ export default async function ProviderAppointmentDetailPage({
 
   const provider = await fetchProviderByUserId(supabase, user.id);
   if (!provider) redirect("/portal");
+  if (!isProviderVerified(provider)) redirect("/provider");
 
   const [appointment, forms, documents, note, followUp, recentNotes] = await Promise.all([
     fetchProviderAppointmentById(supabase, provider.id, id),

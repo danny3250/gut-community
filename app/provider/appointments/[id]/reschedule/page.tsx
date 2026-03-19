@@ -4,7 +4,7 @@ import { createClient } from "@/lib/supabase/server";
 import RescheduleAppointmentForm from "@/app/components/appointments/RescheduleAppointmentForm";
 import { fetchProviderAppointmentById } from "@/lib/carebridge/appointments";
 import { getProviderCalendar } from "@/lib/carebridge/scheduling";
-import { fetchProviderByUserId } from "@/lib/carebridge/providers";
+import { fetchProviderByUserId, isProviderVerified } from "@/lib/carebridge/providers";
 
 type ProviderAppointmentReschedulePageProps = {
   params: Promise<{ id: string }>;
@@ -23,6 +23,7 @@ export default async function ProviderAppointmentReschedulePage({
 
   const provider = await fetchProviderByUserId(supabase, user.id);
   if (!provider) redirect("/portal");
+  if (!isProviderVerified(provider)) redirect("/provider");
 
   const appointment = await fetchProviderAppointmentById(supabase, provider.id, id);
   if (!appointment) notFound();

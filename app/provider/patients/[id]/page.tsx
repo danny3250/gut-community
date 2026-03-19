@@ -4,7 +4,7 @@ import PatientAnalyticsPanel from "./PatientAnalyticsPanel";
 import { createClient } from "@/lib/supabase/server";
 import { getPatientCheckinSummaryForProvider } from "@/lib/carebridge/checkins";
 import { fetchRecentProviderNotesForPatient, getProviderVisitNotePreview } from "@/lib/carebridge/provider-notes";
-import { fetchProviderByUserId } from "@/lib/carebridge/providers";
+import { fetchProviderByUserId, isProviderVerified } from "@/lib/carebridge/providers";
 
 type ProviderPatientDetailPageProps = {
   params: Promise<{ id: string }>;
@@ -21,6 +21,7 @@ export default async function ProviderPatientDetailPage({ params }: ProviderPati
 
   const provider = await fetchProviderByUserId(supabase, user.id);
   if (!provider) redirect("/portal");
+  if (!isProviderVerified(provider)) redirect("/provider");
 
   const [detail, recentNotes] = await Promise.all([
     getPatientCheckinSummaryForProvider(supabase, provider.id, id),

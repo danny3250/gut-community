@@ -3,7 +3,7 @@ import ProviderScheduleManager, { ProviderScheduleManagerProps } from "./Provide
 import { createClient } from "@/lib/supabase/server";
 import { fetchAppointmentsForProvider } from "@/lib/carebridge/appointments";
 import { fetchProviderTimeBlocks, getProviderCalendar } from "@/lib/carebridge/scheduling";
-import { fetchProviderAvailability, fetchProviderByUserId } from "@/lib/carebridge/providers";
+import { fetchProviderAvailability, fetchProviderByUserId, isProviderVerified } from "@/lib/carebridge/providers";
 
 export default async function ProviderSchedulePage() {
   const supabase = await createClient();
@@ -25,6 +25,7 @@ export default async function ProviderSchedulePage() {
       </section>
     );
   }
+  if (!isProviderVerified(provider)) redirect("/provider");
 
   const start = new Date();
   const end = new Date(Date.now() + 1000 * 60 * 60 * 24 * 6);

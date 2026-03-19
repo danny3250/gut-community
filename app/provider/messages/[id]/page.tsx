@@ -3,6 +3,7 @@ import { notFound, redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import MessageComposer from "@/app/components/messages/MessageComposer";
 import { getConversationForUser, markConversationAsRead } from "@/lib/carebridge/messages";
+import { fetchProviderByUserId, isProviderVerified } from "@/lib/carebridge/providers";
 
 export default async function ProviderMessageDetailPage({
   params,
@@ -16,6 +17,10 @@ export default async function ProviderMessageDetailPage({
   } = await supabase.auth.getUser();
 
   if (!user) redirect("/login");
+
+  const provider = await fetchProviderByUserId(supabase, user.id);
+  if (!provider) redirect("/portal");
+  if (!isProviderVerified(provider)) redirect("/provider");
 
   await markConversationAsRead(supabase, id, user.id);
   const detail = await getConversationForUser(supabase, id, user.id, "provider");

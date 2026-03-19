@@ -2,7 +2,7 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import AvailabilitySettingsManager from "./AvailabilitySettingsManager";
-import { fetchProviderAvailability, fetchProviderByUserId } from "@/lib/carebridge/providers";
+import { fetchProviderAvailability, fetchProviderByUserId, isProviderVerified } from "@/lib/carebridge/providers";
 
 export default async function ProviderAvailabilitySettingsPage() {
   const supabase = await createClient();
@@ -14,6 +14,7 @@ export default async function ProviderAvailabilitySettingsPage() {
 
   const provider = await fetchProviderByUserId(supabase, user.id);
   if (!provider) redirect("/provider");
+  if (!isProviderVerified(provider)) redirect("/provider");
 
   const availability = await fetchProviderAvailability(supabase, provider.id);
 

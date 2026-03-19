@@ -5,7 +5,7 @@ import AppointmentStatusBadge from "@/app/components/AppointmentStatusBadge";
 import AppointmentActionButton from "@/app/components/appointments/AppointmentActionButton";
 import WorkspaceSectionHeader from "@/app/components/layout/WorkspaceSectionHeader";
 import { AppointmentWithPatient, fetchAppointmentsForProvider, formatAppointmentDateTime, getAppointmentTimingState } from "@/lib/carebridge/appointments";
-import { fetchProviderByUserId } from "@/lib/carebridge/providers";
+import { fetchProviderByUserId, isProviderVerified } from "@/lib/carebridge/providers";
 import LaunchVisitButton from "./[id]/LaunchVisitButton";
 
 export default async function ProviderAppointmentsPage() {
@@ -18,6 +18,7 @@ export default async function ProviderAppointmentsPage() {
 
   const provider = await fetchProviderByUserId(supabase, user.id);
   if (!provider) redirect("/portal");
+  if (!isProviderVerified(provider)) redirect("/provider");
 
   const appointments = await fetchAppointmentsForProvider(supabase, provider.id);
   const now = new Date();

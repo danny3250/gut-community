@@ -38,5 +38,14 @@ export async function POST(request: NextRequest) {
     waterIntake: payload.waterIntake ?? null,
   });
 
+  await supabase.from("audit_logs").insert({
+    actor_user_id: user.id,
+    actor_role: "patient",
+    action: "daily_checkin_saved",
+    entity_type: "daily_checkin",
+    entity_id: checkinId,
+    metadata_json: {},
+  });
+
   return NextResponse.json({ ok: true, checkinId });
 }

@@ -2,7 +2,7 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { fetchRecentProviderNotes, getProviderVisitNotePreview } from "@/lib/carebridge/provider-notes";
-import { fetchProviderByUserId } from "@/lib/carebridge/providers";
+import { fetchProviderByUserId, isProviderVerified } from "@/lib/carebridge/providers";
 
 export default async function ProviderNotesPage() {
   const supabase = await createClient();
@@ -14,6 +14,7 @@ export default async function ProviderNotesPage() {
 
   const provider = await fetchProviderByUserId(supabase, user.id);
   if (!provider) redirect("/portal");
+  if (!isProviderVerified(provider)) redirect("/provider");
 
   const notes = await fetchRecentProviderNotes(supabase, provider.id, 24);
 

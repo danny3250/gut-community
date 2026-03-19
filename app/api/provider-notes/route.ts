@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { upsertProviderVisitNote } from "@/lib/carebridge/provider-notes";
-import { fetchProviderByUserId } from "@/lib/carebridge/providers";
+import { fetchProviderByUserId, isProviderVerified } from "@/lib/carebridge/providers";
 
 export async function POST(request: Request) {
   const supabase = await createClient();
@@ -16,6 +16,9 @@ export async function POST(request: Request) {
   const provider = await fetchProviderByUserId(supabase, user.id);
   if (!provider) {
     return NextResponse.json({ error: "Only providers can save visit notes." }, { status: 403 });
+  }
+  if (!isProviderVerified(provider)) {
+    return NextResponse.json({ error: "Provider notes are unavailable until verification is complete." }, { status: 403 });
   }
 
   const body = (await request.json()) as {

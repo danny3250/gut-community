@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { createClient } from "@/lib/supabase/server";
-import { fetchProviderByUserId } from "@/lib/carebridge/providers";
+import { fetchProviderByUserId, isProviderVerified } from "@/lib/carebridge/providers";
 import { fetchPatientByUserId } from "@/lib/carebridge/patients";
 import { syncPatientProviderRelationship } from "@/lib/carebridge/relationships";
 import { createNotifications, type NotificationInput } from "@/lib/carebridge/notifications";
@@ -33,6 +33,9 @@ export async function POST(_request: NextRequest, { params }: RouteContext) {
     const provider = await fetchProviderByUserId(supabase, user.id);
     if (!provider) {
       return NextResponse.json({ error: "Provider record not found." }, { status: 404 });
+    }
+    if (!isProviderVerified(provider)) {
+      return NextResponse.json({ error: "Appointment cancellation is unavailable until provider verification is complete." }, { status: 403 });
     }
 
     const appointment = await fetchProviderAppointmentById(supabase, provider.id, id);

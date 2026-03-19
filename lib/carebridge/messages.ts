@@ -1,6 +1,7 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { Role } from "@/lib/auth/roles";
 import { createNotification } from "@/lib/carebridge/notifications";
+import { fetchProviderByUserId, isProviderVerified } from "@/lib/carebridge/providers";
 import { createAdminClient } from "@/lib/supabase/admin";
 
 type ConversationRow = {
@@ -255,6 +256,11 @@ export async function ensureAppointmentConversation(
     throw new Error("You do not have access to this appointment conversation.");
   }
 
+  const providerRecord = await fetchProviderByUserId(supabase, provider.user_id);
+  if (!providerRecord || !isProviderVerified(providerRecord)) {
+    throw new Error("Messaging is unavailable because provider access is not currently active.");
+  }
+
   const appointmentLabel = formatAppointmentLabel(appointment);
   const subject = defaultSubject(appointmentLabel);
   const now = new Date().toISOString();
@@ -303,6 +309,11 @@ export async function sendMessageInConversation(
 
   if (conversationError) throw conversationError;
   if (!conversation) throw new Error("Conversation not found.");
+
+  const providerRecord = await fetchProviderByUserId(supabase, conversation.provider_user_id);
+  if (!providerRecord || !isProviderVerified(providerRecord)) {
+    throw new Error("Messaging is unavailable because provider access is not currently active.");
+  }
 
   const recipientUserId =
     conversation.patient_user_id === senderUserId ? conversation.provider_user_id : conversation.patient_user_id;
