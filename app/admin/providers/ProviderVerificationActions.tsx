@@ -44,44 +44,63 @@ export default function ProviderVerificationActions({
     router.refresh();
   }
 
+  const isApproved = currentStatus === "approved" && providerStatus !== "suspended";
+  const isPending = currentStatus === "pending";
+  const isSuspended = providerStatus === "suspended";
+  const isRejected = currentStatus === "rejected";
+
+  const approveLabel = "Approved";
+  const pendingLabel = "Pending";
+  const suspendLabel = "Suspend";
+  const rejectLabel = "Reject";
+
+  const activeButtonClass = "btn-primary px-4 py-2 text-sm";
+  const inactiveButtonClass = "btn-secondary px-4 py-2 text-sm";
+
   return (
     <div className="space-y-3">
-      <div className="rounded-[24px] border border-[var(--border)] bg-white/72 px-4 py-4 text-sm leading-6 muted">
-        Current application status: <span className="font-semibold capitalize text-[var(--foreground)]">{currentStatus}</span>
-        {hasActiveProvider ? (
-          <>
-            {" "}· Active provider record: <span className="font-semibold capitalize text-[var(--foreground)]">{providerStatus ?? "active"}</span>
-          </>
-        ) : null}
-      </div>
-
       <div className="flex flex-wrap gap-2">
-        <button type="button" className="btn-primary px-4 py-2 text-sm" onClick={() => updateStatus("approved")} disabled={loadingState !== null}>
-          {loadingState === "approved" ? "Approving..." : "Approve"}
+        <button
+          type="button"
+          className={isApproved ? activeButtonClass : inactiveButtonClass}
+          onClick={() => updateStatus("approved")}
+          disabled={loadingState !== null || isApproved}
+        >
+          {loadingState === "approved" ? "Approving..." : approveLabel}
         </button>
         <button
           type="button"
-          className="btn-secondary px-4 py-2 text-sm"
+          className={isPending ? activeButtonClass : inactiveButtonClass}
           onClick={() => updateStatus("pending")}
-          disabled={loadingState !== null || hasActiveProvider}
+          disabled={loadingState !== null || isPending}
         >
-          {loadingState === "pending" ? "Saving..." : "Mark pending"}
+          {loadingState === "pending" ? "Saving..." : pendingLabel}
         </button>
-        <button type="button" className="btn-secondary px-4 py-2 text-sm" onClick={() => updateStatus("suspended")} disabled={loadingState !== null || !hasActiveProvider}>
-          {loadingState === "suspended" ? "Saving..." : "Suspend"}
+        <button
+          type="button"
+          className={isSuspended ? activeButtonClass : inactiveButtonClass}
+          onClick={() => updateStatus("suspended")}
+          disabled={loadingState !== null || !hasActiveProvider || isSuspended}
+        >
+          {loadingState === "suspended" ? "Saving..." : suspendLabel}
         </button>
       </div>
 
       <div className="rounded-[24px] border border-[var(--border)] bg-white/72 px-4 py-4">
-        <label className="mb-2 block text-sm font-semibold">Rejection reason</label>
+        <label className="mb-2 block text-sm font-semibold">Rejection notes</label>
         <textarea
           className="field min-h-[110px]"
           value={rejectionReason}
           onChange={(event) => setRejectionReason(event.target.value)}
           placeholder="Optional notes the provider can use to revise and resubmit."
         />
-        <button type="button" className="btn-secondary mt-3 px-4 py-2 text-sm" onClick={() => updateStatus("rejected")} disabled={loadingState !== null}>
-          {loadingState === "rejected" ? "Rejecting..." : "Reject"}
+        <button
+          type="button"
+          className={`${isRejected ? activeButtonClass : inactiveButtonClass} mt-3`}
+          onClick={() => updateStatus("rejected")}
+          disabled={loadingState !== null || isRejected}
+        >
+          {loadingState === "rejected" ? "Rejecting..." : rejectLabel}
         </button>
       </div>
 

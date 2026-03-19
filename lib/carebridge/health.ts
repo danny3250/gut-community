@@ -44,6 +44,31 @@ export type DailyCheckinInput = {
   waterIntake?: string | null;
 };
 
+export type CheckinTrendPoint = {
+  date: string;
+  overallFeeling: number;
+  sleepHours: number | null;
+  stressLevel: number | null;
+};
+
+export type ProviderPatientHealthAnalytics = {
+  overview: {
+    recentCheckinCount: number;
+    averageFeeling: number | null;
+    averageSleepHours: number | null;
+    averageStressLevel: number | null;
+    mostCommonSymptom: string | null;
+    mostCommonFood: string | null;
+    feelingDirection: "up" | "down" | "steady";
+    sleepDirection: "up" | "down" | "steady";
+    stressDirection: "up" | "down" | "steady";
+  };
+  feelingTrend: CheckinTrendPoint[];
+  sleepStressTrend: CheckinTrendPoint[];
+  symptomFrequency: Array<{ name: string; count: number }>;
+  foodFrequency: Array<{ name: string; count: number }>;
+};
+
 export async function fetchHealthOptions(supabase: SupabaseClient) {
   const [{ data: symptoms, error: symptomsError }, { data: foods, error: foodsError }] = await Promise.all([
     supabase.from("symptoms").select("id,name,slug").order("name", { ascending: true }),
@@ -284,10 +309,12 @@ export async function fetchProviderPatientHealthDetail(
   if (!appointment) return null;
 
   const recentCheckins = await getUserRecentCheckins(supabase, patient.user_id, 14);
+  const analytics = buildProviderPatientHealthAnalytics(recentCheckins);
   return {
     patient,
     recentCheckins,
     trends: summarizeCheckinTrends(recentCheckins),
+    analytics,
   };
 }
 
@@ -310,4 +337,60 @@ export async function getRecipeRelevantSignals(
     averageSleepHours: trends.averageSleepHours,
     averageStressLevel: trends.averageStressLevel,
   };
+}
+
+export function buildProviderPatientHealthAnalytics(checkins: DailyCheckinRecord[]): ProviderPatientHealthAnalytics {
+  const ordered = [...checkins].sort((left, right) => left.checkin_date.localeCompare(right.checkin_date));
+  const trends = summarizeCheckinTrends(checkins);
+  const feelingTrend = ordered.map((checkin) => {
+    const lifestyle = Array.isArray(checkin.lifestyle_metrics) ? checkin.lifestyle_metrics[0] : checkin.lifestyle_metrics;
+    return {
+      date: checkin.checkin_date,
+      overallFeeling: checkin.overall_feeling,
+      sleepHours: typeof lifestyle?.sleep_hours === "number" ? lifestyle.sleep_hours : null,
+      stressLevel: typeof lifestyle?.stress_level === "number" ? lifestyle.stress_level : null,
+    };
+  });
+
+  const firstHalf = feelingTrend.slice(0, Math.max(1, Math.floor(feelingTrend.length / 2)));
+  const secondHalf = feelingTrend.slice(Math.max(1, Math.floor(feelingTrend.length / 2)));
+
+  return {
+    overview: {
+      recentCheckinCount: checkins.length,
+      averageFeeling: trends.averageFeeling,
+      averageSleepHours: trends.averageSleepHours,
+      averageStressLevel: trends.averageStressLevel,
+      mostCommonSymptom: trends.symptomFrequency[0]?.name ?? null,
+      mostCommonFood: trends.recentFoods[0]?.name ?? null,
+      feelingDirection: getDirection(
+        average(firstHalf.map((point) => point.overallFeeling)),
+        average(secondHalf.map((point) => point.overallFeeling))
+      ),
+      sleepDirection: getDirection(
+        average(firstHalf.map((point) => point.sleepHours).filter((value): value is number => typeof value === "number")),
+        average(secondHalf.map((point) => point.sleepHours).filter((value): value is number => typeof value === "number"))
+      ),
+      stressDirection: getDirection(
+        average(firstHalf.map((point) => point.stressLevel).filter((value): value is number => typeof value === "number")),
+        average(secondHalf.map((point) => point.stressLevel).filter((value): value is number => typeof value === "number"))
+      ),
+    },
+    feelingTrend,
+    sleepStressTrend: feelingTrend,
+    symptomFrequency: trends.symptomFrequency,
+    foodFrequency: trends.recentFoods,
+  };
+}
+
+function average(values: number[]) {
+  if (values.length === 0) return null;
+  return values.reduce((sum, value) => sum + value, 0) / values.length;
+}
+
+function getDirection(before: number | null, after: number | null): "up" | "down" | "steady" {
+  if (before === null || after === null) return "steady";
+  if (after - before >= 0.35) return "up";
+  if (before - after >= 0.35) return "down";
+  return "steady";
 }

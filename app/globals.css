@@ -1,15 +1,18 @@
 @import "tailwindcss";
 
 :root {
-  --background: #f6f1e8;
+  --background: #f5f3ee;
   --foreground: #1f2a1f;
   --surface: rgba(255, 252, 246, 0.82);
   --surface-strong: #fffdf9;
+  --surface-subtle: rgba(255, 252, 246, 0.58);
   --border: rgba(49, 72, 52, 0.14);
   --muted: #5d685c;
-  --accent: #2f6b4f;
-  --accent-strong: #1f4d39;
-  --accent-soft: #dcefe3;
+  --accent: #1f6f5b;
+  --accent-strong: #1f6f5b;
+  --accent-soft: rgba(79, 182, 168, 0.14);
+  --teal: #4fb6a8;
+  --health: #6dbe45;
   --warm: #efdfc8;
 }
 
@@ -67,22 +70,58 @@ textarea {
 
 @layer components {
   .shell {
-    @apply mx-auto w-full max-w-7xl px-4 sm:px-6 lg:px-8;
+    @apply mx-auto w-full max-w-[96rem] px-5 sm:px-7 lg:px-10;
   }
 
   .panel {
     background: var(--surface);
     border: 1px solid var(--border);
-    box-shadow: 0 18px 50px rgba(64, 53, 33, 0.08);
-    backdrop-filter: blur(18px);
-    @apply rounded-[28px];
+    box-shadow: 0 10px 30px rgba(64, 53, 33, 0.06);
+    backdrop-filter: blur(14px);
+    @apply rounded-[18px];
   }
 
   .panel-strong {
     background: var(--surface-strong);
     border: 1px solid var(--border);
-    box-shadow: 0 20px 60px rgba(64, 53, 33, 0.12);
-    @apply rounded-[28px];
+    box-shadow: 0 12px 34px rgba(64, 53, 33, 0.08);
+    @apply rounded-[18px];
+  }
+
+  .section-shell {
+    @apply py-1;
+  }
+
+  .section-divider {
+    border-top: 1px solid var(--border);
+    @apply pt-5;
+  }
+
+  .workspace-section {
+    border-top: 1px solid var(--border);
+    @apply pt-6;
+  }
+
+  .section-rule {
+    border-top: 1px solid var(--border);
+    @apply pt-5;
+  }
+
+  .inline-panel {
+    background: var(--surface-subtle);
+    border: 1px solid rgba(49, 72, 52, 0.1);
+    @apply rounded-[14px];
+  }
+
+  .data-row {
+    border-top: 1px solid rgba(49, 72, 52, 0.1);
+    @apply py-4;
+  }
+
+  .metric-tile {
+    background: rgba(255, 255, 255, 0.72);
+    border: 1px solid rgba(49, 72, 52, 0.1);
+    @apply rounded-[14px] px-4 py-4;
   }
 
   .section-title {
@@ -91,27 +130,31 @@ textarea {
 
   .eyebrow {
     color: var(--accent-strong);
-    background: rgba(220, 239, 227, 0.8);
-    border: 1px solid rgba(47, 107, 79, 0.14);
-    @apply inline-flex items-center rounded-full px-3 py-1 text-xs font-semibold uppercase tracking-[0.22em];
+    background: rgba(79, 182, 168, 0.12);
+    border: 1px solid rgba(79, 182, 168, 0.24);
+    @apply inline-flex items-center rounded-[10px] px-3 py-1 text-xs font-semibold uppercase tracking-[0.22em];
   }
 
   .btn-primary {
-    background: linear-gradient(135deg, var(--accent) 0%, var(--accent-strong) 100%);
+    background: linear-gradient(135deg, var(--accent) 0%, var(--teal) 100%);
     color: white;
     box-shadow: 0 16px 30px rgba(31, 77, 57, 0.22);
-    @apply inline-flex items-center justify-center rounded-full px-5 py-3 text-sm font-semibold;
+    @apply inline-flex items-center justify-center rounded-[14px] px-5 py-3 text-sm font-semibold;
   }
 
   .btn-primary:hover {
     transform: translateY(-1px);
   }
 
+  .btn-primary:focus-visible {
+    box-shadow: 0 0 0 4px rgba(79, 182, 168, 0.18);
+  }
+
   .btn-secondary {
     background: rgba(255, 255, 255, 0.75);
     border: 1px solid var(--border);
     color: var(--foreground);
-    @apply inline-flex items-center justify-center rounded-full px-5 py-3 text-sm font-semibold;
+    @apply inline-flex items-center justify-center rounded-[14px] px-5 py-3 text-sm font-semibold;
   }
 
   .btn-secondary:hover {
@@ -121,7 +164,15 @@ textarea {
   .field {
     background: rgba(255, 255, 255, 0.85);
     border: 1px solid rgba(49, 72, 52, 0.16);
-    @apply w-full rounded-2xl px-4 py-3 outline-none;
+    @apply w-full rounded-[14px] px-4 py-3 outline-none;
+  }
+
+  .hero-wordmark {
+    animation: hero-rise 560ms ease-out both;
+  }
+
+  .hero-tagline {
+    animation: hero-rise 720ms ease-out both;
   }
 
   .field:focus {
@@ -131,5 +182,20 @@ textarea {
 
   .muted {
     color: var(--muted);
+  }
+
+  .text-link {
+    color: var(--accent-strong);
+  }
+}
+
+@keyframes hero-rise {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
   }
 }

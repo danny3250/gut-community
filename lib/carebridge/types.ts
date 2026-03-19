@@ -6,6 +6,8 @@ export type ProviderDirectoryRecord = {
   display_name: string;
   credentials: string | null;
   specialty: string | null;
+  specialties: string[];
+  condition_focus: string[];
   bio: string | null;
   states_served: string[];
   license_states?: string[];
@@ -31,6 +33,8 @@ export type ProviderApplicationRecord = {
   display_name: string;
   credentials: string | null;
   specialty: string | null;
+  specialty_slugs: string[];
+  condition_focus_slugs: string[];
   bio: string | null;
   states_served: string[];
   license_states: string[];
@@ -48,6 +52,26 @@ export type ProviderApplicationRecord = {
   updated_at: string;
   organization: { name: string | null; slug?: string | null } | null;
   active_provider: ProviderDirectoryRecord | null;
+};
+
+export type PatientProviderRelationshipRecord = {
+  id: string;
+  patient_id: string;
+  provider_id: string;
+  status: "booked" | "active" | "past" | string;
+  is_primary: boolean;
+  is_favorite: boolean;
+  first_appointment_at: string | null;
+  last_appointment_at: string | null;
+  created_at: string;
+  updated_at: string;
+  provider?: ProviderDirectoryRecord | null;
+  patient?: {
+    id: string;
+    user_id?: string | null;
+    legal_name: string | null;
+    email: string | null;
+  } | null;
 };
 
 export type ProviderAvailabilityRecord = {
@@ -102,4 +126,23 @@ export type ProviderVisitNoteRecord = {
   created_at: string;
   updated_at: string;
   finalized_at: string | null;
+};
+
+export type PatientFollowUpSummaryRecord = {
+  id: string;
+  appointment_id: string;
+  visit_id: string | null;
+  patient_id: string;
+  provider_id: string;
+  follow_up_title: string | null;
+  follow_up_summary: string;
+  follow_up_instructions: string | null;
+  what_to_track: string | null;
+  recommended_next_step: string | null;
+  status: "draft" | "published" | string;
+  published_at: string | null;
+  created_by_user_id: string | null;
+  last_edited_by_user_id: string | null;
+  created_at: string;
+  updated_at: string;
 };

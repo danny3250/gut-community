@@ -1,70 +1,104 @@
-import { getCurrentUserWithRole } from "@/lib/auth/session";
+import AdminFilterBar from "@/app/admin/components/AdminFilterBar";
+import AdminSectionHeader from "@/app/admin/components/AdminSectionHeader";
+import AdminStatusBadge from "@/app/admin/components/AdminStatusBadge";
+import AdminTable from "@/app/admin/components/AdminTable";
+import UserManagementActions from "./UserManagementActions";
+import { fetchAdminUsers } from "@/lib/carebridge/admin";
 
-type UserRow = {
-  id: string;
-  user_id: string | null;
-  display_name: string | null;
-  role: string;
-  organization_id: string | null;
-  organizations?: { name: string | null } | { name: string | null }[] | null;
+type AdminUsersPageProps = {
+  searchParams: Promise<{ role?: string; status?: string; q?: string }>;
 };
 
-export default async function AdminUsersPage() {
-  const { supabase, role, organizationName } = await getCurrentUserWithRole();
-  const { data } = await supabase
-    .from("profiles")
-    .select("id,user_id,display_name,role,organization_id,organizations(name)")
-    .order("display_name", { ascending: true });
+export default async function AdminUsersPage({ searchParams }: AdminUsersPageProps) {
+  const resolvedSearchParams = await searchParams;
+  const users = await fetchAdminUsers();
+  const roleFilter = resolvedSearchParams.role?.trim() ?? "";
+  const statusFilter = resolvedSearchParams.status?.trim() ?? "";
+  const query = resolvedSearchParams.q?.trim().toLowerCase() ?? "";
 
-  const users = (data ?? []) as UserRow[];
+  const filteredUsers = users.filter((user) => {
+    if (roleFilter && user.role !== roleFilter) return false;
+    if (statusFilter) {
+      const computedStatus = user.disabled ? "disabled" : "active";
+      if (computedStatus !== statusFilter) return false;
+    }
+    if (query) {
+      const haystack = [user.display_name, user.email, user.role].filter(Boolean).join(" ").toLowerCase();
+      if (!haystack.includes(query)) return false;
+    }
+    return true;
+  });
 
   return (
-    <section className="grid gap-5">
-      <section className="panel px-6 py-6 sm:px-8">
-        <span className="eyebrow">Users</span>
-        <h1 className="mt-4 text-3xl font-semibold">Tenant-aware access overview</h1>
-        <p className="mt-3 max-w-2xl text-sm leading-6 muted">
-          {role === "admin"
-            ? "Review platform users, role distribution, and organization ownership from one place."
-            : `These users are visible inside ${organizationName ?? "your organization"} based on tenant boundaries.`}
-        </p>
-      </section>
+    <section className="grid gap-4">
+      <AdminSectionHeader
+        eyebrow="Users"
+        title="User management"
+        description="Review account access, adjust platform roles, and manage user availability from a compact operations table."
+      />
 
-      <section className="grid gap-4">
-        {users.length === 0 ? (
-          <div className="panel px-6 py-6 text-sm muted">No users are visible for this tenant yet.</div>
-        ) : (
-          users.map((user) => {
-            const organization = Array.isArray(user.organizations)
-              ? (user.organizations[0] ?? null)
-              : (user.organizations ?? null);
+      <form className="grid gap-3 lg:grid-cols-[minmax(0,1fr)_180px_180px_auto]">
+        <AdminFilterBar>
+          <input
+            type="text"
+            name="q"
+            defaultValue={resolvedSearchParams.q ?? ""}
+            placeholder="Search name, email, or role"
+            className="w-full min-w-[220px] bg-transparent text-sm outline-none"
+          />
+        </AdminFilterBar>
+        <AdminFilterBar>
+          <select name="role" defaultValue={roleFilter} className="w-full bg-transparent text-sm outline-none">
+            <option value="">All roles</option>
+            <option value="patient">Patient</option>
+            <option value="provider">Provider</option>
+            <option value="admin">Admin</option>
+            <option value="organization_owner">Organization owner</option>
+            <option value="support_staff">Support staff</option>
+            <option value="moderator">Moderator</option>
+          </select>
+        </AdminFilterBar>
+        <AdminFilterBar>
+          <select name="status" defaultValue={statusFilter} className="w-full bg-transparent text-sm outline-none">
+            <option value="">All statuses</option>
+            <option value="active">Active</option>
+            <option value="disabled">Disabled</option>
+          </select>
+        </AdminFilterBar>
+        <button type="submit" className="rounded-[16px] bg-[#1f2937] px-4 py-3 text-sm font-semibold text-white">
+          Filter
+        </button>
+      </form>
 
-            return (
-              <article key={user.id} className="panel px-6 py-6 sm:px-8">
-                <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
-                  <div>
-                    <h2 className="text-xl font-semibold">{user.display_name ?? "Unnamed user"}</h2>
-                    <p className="mt-2 text-sm leading-6 muted">
-                      {user.role.replace(/_/g, " ")}
-                      {organization?.name ? ` · ${organization.name}` : ""}
-                    </p>
-                  </div>
-                  <div className="flex flex-wrap gap-2 text-xs muted">
-                    <span className="rounded-full border border-[var(--border)] px-3 py-1">
-                      Profile: {user.id.slice(0, 8)}
-                    </span>
-                    {user.user_id ? (
-                      <span className="rounded-full border border-[var(--border)] px-3 py-1">
-                        User: {user.user_id.slice(0, 8)}
-                      </span>
-                    ) : null}
-                  </div>
-                </div>
-              </article>
-            );
-          })
-        )}
-      </section>
+      {filteredUsers.length === 0 ? (
+        <div className="rounded-[22px] border border-[var(--border)] bg-white/82 px-6 py-6 text-sm muted">
+          No users are available in the admin workspace yet.
+        </div>
+      ) : (
+        <AdminTable columns={["Name", "Email", "Role", "Created", "Status", "Actions"]}>
+          {filteredUsers.map((user) => (
+            <tr key={user.id} className="border-b border-[var(--border)] last:border-b-0">
+              <td className="px-4 py-3.5 align-top">
+                <div className="font-semibold">{user.display_name ?? "Unnamed user"}</div>
+                <div className="mt-1 text-xs muted">ID {user.id.slice(0, 8)}</div>
+              </td>
+              <td className="px-4 py-3.5 align-top text-[rgba(43,36,28,0.82)]">{user.email ?? "No email"}</td>
+              <td className="px-4 py-3.5 align-top">
+                <AdminStatusBadge status={user.role ?? "patient"} />
+              </td>
+              <td className="px-4 py-3.5 align-top text-[rgba(43,36,28,0.82)]">
+                {user.created_at ? new Date(user.created_at).toLocaleDateString() : "Unknown"}
+              </td>
+              <td className="px-4 py-3.5 align-top">
+                <AdminStatusBadge status={user.disabled ? "disabled" : "active"} />
+              </td>
+              <td className="px-4 py-3.5 align-top">
+                <UserManagementActions userId={user.id} currentRole={user.role ?? "patient"} isDisabled={user.disabled} />
+              </td>
+            </tr>
+          ))}
+        </AdminTable>
+      )}
     </section>
   );
 }

@@ -27,6 +27,8 @@ export default async function ProviderCommunityPage({ searchParams }: ProviderCo
   const matchTerms = new Set(
     [
       provider?.specialty ?? "",
+      ...(provider?.specialties ?? []),
+      ...(provider?.condition_focus ?? []),
       ...(provider?.areas_of_care ?? []),
     ]
       .map((value) => value.toLowerCase().trim())
@@ -54,7 +56,8 @@ export default async function ProviderCommunityPage({ searchParams }: ProviderCo
         </p>
         {provider ? (
           <div className="mt-5 rounded-[24px] border border-[var(--border)] bg-white/72 px-4 py-4 text-sm muted">
-            Matching against {provider.specialty ?? "your specialty"} and {provider.areas_of_care?.length ?? 0} care areas.
+            Matching against {provider.specialties[0] ?? provider.specialty ?? "your clinical focus"} and{" "}
+            {(provider.condition_focus?.length ?? 0) + (provider.areas_of_care?.length ?? 0)} scope areas.
           </div>
         ) : null}
         {!verified ? (

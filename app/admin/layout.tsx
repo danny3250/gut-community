@@ -2,6 +2,7 @@ import { redirect } from "next/navigation";
 import CareWorkspaceShell from "@/app/components/CareWorkspaceShell";
 import { getCurrentUserWithRole } from "@/lib/auth/session";
 import { isAdmin } from "@/lib/auth/roles";
+import { PRODUCT_LABELS } from "@/lib/carebridge/taxonomy";
 
 const adminLinks = [
   { href: "/admin", label: "Dashboard" },
@@ -11,6 +12,7 @@ const adminLinks = [
   { href: "/admin/appointments", label: "Appointments" },
   { href: "/admin/audit", label: "Audit" },
   { href: "/admin/content", label: "Content" },
+  { href: "/admin/moderation", label: "Moderation" },
   { href: "/admin/settings", label: "Settings" },
 ];
 
@@ -26,12 +28,14 @@ export default async function AdminLayout({ children }: { children: React.ReactN
 
   return (
     <CareWorkspaceShell
-      areaLabel="Admin Portal"
+      areaLabel={PRODUCT_LABELS.adminWorkspace}
       title="CareBridge administration"
       description="Users, providers, organizations, content, moderation, and audit visibility for healthcare operations."
       email={user.email ?? null}
       primaryLinks={adminLinks}
       secondaryLinks={secondaryLinks}
+      showHeaderNavigation={false}
+      variant="admin"
     >
       {children}
     </CareWorkspaceShell>

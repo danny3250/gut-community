@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { createClient } from "@/lib/supabase/server";
 import { createNotifications, type NotificationInput } from "@/lib/carebridge/notifications";
+import { syncPatientProviderRelationship } from "@/lib/carebridge/relationships";
 import { fetchProviderById, fetchProviderByUserId } from "@/lib/carebridge/providers";
 import { fetchPatientByUserId } from "@/lib/carebridge/patients";
 import {
@@ -73,6 +74,8 @@ export async function POST(request: NextRequest, { params }: RouteContext) {
       timezone: payload.timezone,
       status: "confirmed",
     });
+    const admin = createAdminClient();
+    await syncPatientProviderRelationship(admin, appointment.patient_id, provider.id);
     const patientUserId = Array.isArray(appointment.patients) ? appointment.patients[0]?.user_id : appointment.patients?.user_id;
     const notifications: NotificationInput[] = [
       ...(provider.user_id
@@ -96,7 +99,6 @@ export async function POST(request: NextRequest, { params }: RouteContext) {
           }]
         : []),
     ];
-    const admin = createAdminClient();
     await createNotifications(admin, notifications);
     return NextResponse.json({ ok: true });
   }
@@ -135,6 +137,8 @@ export async function POST(request: NextRequest, { params }: RouteContext) {
     timezone: payload.timezone,
     status: "requested",
   });
+  const admin = createAdminClient();
+  await syncPatientProviderRelationship(admin, patient.id, provider.id);
   const notifications: NotificationInput[] = [
     {
       userId: user.id,
@@ -155,7 +159,6 @@ export async function POST(request: NextRequest, { params }: RouteContext) {
         }]
       : []),
   ];
-  const admin = createAdminClient();
   await createNotifications(admin, notifications);
   return NextResponse.json({ ok: true });
 }

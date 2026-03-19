@@ -69,7 +69,7 @@ export default async function ProviderProfilePage({ params }: ProviderProfilePag
           <div>
             <h1 className="text-4xl font-semibold">{provider.display_name}</h1>
             <p className="mt-2 text-base leading-7 muted">
-              {[provider.credentials, provider.specialty].filter(Boolean).join(" | ")}
+              {[provider.credentials, provider.specialties[0] ?? provider.specialty].filter(Boolean).join(" | ")}
             </p>
           </div>
 
@@ -105,13 +105,18 @@ export default async function ProviderProfilePage({ params }: ProviderProfilePag
 
       <section className="grid gap-4 lg:grid-cols-[1fr_1fr]">
         <div className="panel px-6 py-6 sm:px-8">
-          <h2 className="text-2xl font-semibold">Areas of care</h2>
+          <h2 className="text-2xl font-semibold">Specialties and care focus</h2>
           <div className="mt-4 flex flex-wrap gap-2">
-            {(provider.areas_of_care && provider.areas_of_care.length > 0 ? provider.areas_of_care : [provider.specialty ?? "General care"]).map((item) => (
+            {(provider.specialties.length > 0 ? provider.specialties : [provider.specialty ?? "General care"]).map((item) => (
               <span
                 key={item}
                 className="rounded-full bg-[var(--accent-soft)] px-3 py-2 text-sm text-[var(--accent-strong)]"
               >
+                {item}
+              </span>
+            ))}
+            {provider.condition_focus.map((item) => (
+              <span key={item} className="rounded-full border border-[var(--border)] px-3 py-2 text-sm opacity-80">
                 {item}
               </span>
             ))}
@@ -128,8 +133,7 @@ export default async function ProviderProfilePage({ params }: ProviderProfilePag
             ))}
           </div>
           <p className="mt-4 text-sm leading-6 muted">
-            Appointment requests created here will later connect to a telehealth session workflow through the
-            CareBridge visit adapter layer.
+            Appointment requests created here connect the directory, booking, and telehealth workflows inside CareBridge.
           </p>
         </div>
       </section>

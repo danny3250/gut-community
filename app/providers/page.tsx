@@ -1,12 +1,13 @@
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
-import { fetchPublicProviders } from "@/lib/carebridge/providers";
+import { fetchPublicProviders, filterProviders } from "@/lib/carebridge/providers";
 
 type ProvidersPageProps = {
   searchParams: Promise<{
     q?: string;
     organization?: string;
     specialty?: string;
+    condition?: string;
     state?: string;
     telehealth?: string;
   }>;
@@ -20,36 +21,24 @@ export default async function ProvidersPage({ searchParams }: ProvidersPageProps
   const query = resolvedSearchParams.q?.trim().toLowerCase() ?? "";
   const organizationFilter = resolvedSearchParams.organization?.trim() ?? "";
   const specialtyFilter = resolvedSearchParams.specialty?.trim() ?? "";
+  const conditionFilter = resolvedSearchParams.condition?.trim() ?? "";
   const stateFilter = resolvedSearchParams.state?.trim() ?? "";
   const telehealthOnly = resolvedSearchParams.telehealth === "true";
 
   const organizations = Array.from(
     new Set(providers.map((provider) => provider.organization?.name).filter(Boolean))
   ).sort();
-  const specialties = Array.from(new Set(providers.map((provider) => provider.specialty).filter(Boolean))).sort();
+  const specialties = Array.from(new Set(providers.flatMap((provider) => provider.specialties))).sort();
+  const conditions = Array.from(new Set(providers.flatMap((provider) => provider.condition_focus))).sort();
   const states = Array.from(new Set(providers.flatMap((provider) => provider.states_served))).sort();
 
-  const filteredProviders = providers.filter((provider) => {
-    if (query) {
-      const haystack = [
-        provider.display_name,
-        provider.credentials,
-        provider.specialty,
-        provider.bio,
-        provider.organization?.name,
-      ]
-        .filter(Boolean)
-        .join(" ")
-        .toLowerCase();
-
-      if (!haystack.includes(query)) return false;
-    }
-
-    if (organizationFilter && provider.organization?.name !== organizationFilter) return false;
-    if (specialtyFilter && provider.specialty !== specialtyFilter) return false;
-    if (stateFilter && !provider.states_served.includes(stateFilter)) return false;
-    if (telehealthOnly && !provider.telehealth_enabled) return false;
-    return true;
+  const filteredProviders = filterProviders(providers, {
+    query,
+    organization: organizationFilter,
+    specialty: specialtyFilter,
+    condition: conditionFilter,
+    state: stateFilter,
+    telehealthOnly,
   });
 
   return (
@@ -80,7 +69,7 @@ export default async function ProvidersPage({ searchParams }: ProvidersPageProps
       </section>
 
       <section className="panel px-6 py-6 sm:px-8">
-        <form className="grid gap-4 xl:grid-cols-[1.1fr_0.9fr_0.8fr_0.8fr_auto]">
+        <form className="grid gap-4 xl:grid-cols-[1.1fr_0.9fr_0.8fr_0.8fr_0.8fr_auto]">
           <label className="text-sm">
             <div className="mb-2 font-medium">Search</div>
             <input
@@ -111,6 +100,18 @@ export default async function ProvidersPage({ searchParams }: ProvidersPageProps
               {specialties.map((specialty) => (
                 <option key={specialty} value={specialty ?? ""}>
                   {specialty}
+                </option>
+              ))}
+            </select>
+          </label>
+
+          <label className="text-sm">
+            <div className="mb-2 font-medium">Condition focus</div>
+            <select name="condition" defaultValue={conditionFilter} className="field">
+              <option value="">All focus areas</option>
+              {conditions.map((condition) => (
+                <option key={condition} value={condition}>
+                  {condition}
                 </option>
               ))}
             </select>
@@ -155,7 +156,7 @@ export default async function ProvidersPage({ searchParams }: ProvidersPageProps
                 <div>
                   <h2 className="text-2xl font-semibold">{provider.display_name}</h2>
                   <p className="mt-1 text-sm muted">
-                    {[provider.credentials, provider.specialty].filter(Boolean).join(" | ")}
+                    {[provider.credentials, provider.specialties[0] ?? provider.specialty].filter(Boolean).join(" | ")}
                   </p>
                 </div>
                 <span
@@ -176,6 +177,16 @@ export default async function ProvidersPage({ searchParams }: ProvidersPageProps
               {provider.bio ? <p className="mt-3 text-sm leading-6 muted">{provider.bio}</p> : null}
 
               <div className="mt-4 flex flex-wrap gap-2">
+                {provider.specialties.slice(0, 3).map((specialty) => (
+                  <span key={specialty} className="rounded-full bg-[var(--accent-soft)] px-3 py-1 text-xs text-[var(--accent-strong)]">
+                    {specialty}
+                  </span>
+                ))}
+                {provider.condition_focus.slice(0, 2).map((condition) => (
+                  <span key={condition} className="rounded-full border border-[var(--border)] px-3 py-1 text-xs opacity-80">
+                    {condition}
+                  </span>
+                ))}
                 {provider.states_served.map((state) => (
                   <span key={state} className="rounded-full border border-[var(--border)] px-3 py-1 text-xs opacity-80">
                     {state}

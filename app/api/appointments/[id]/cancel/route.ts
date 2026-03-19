@@ -3,6 +3,7 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import { createClient } from "@/lib/supabase/server";
 import { fetchProviderByUserId } from "@/lib/carebridge/providers";
 import { fetchPatientByUserId } from "@/lib/carebridge/patients";
+import { syncPatientProviderRelationship } from "@/lib/carebridge/relationships";
 import { createNotifications, type NotificationInput } from "@/lib/carebridge/notifications";
 import { fetchPatientAppointmentById, fetchProviderAppointmentById, updateAppointmentForPatient, updateAppointmentForProvider } from "@/lib/carebridge/appointments";
 import { Role } from "@/lib/auth/roles";
@@ -44,6 +45,8 @@ export async function POST(_request: NextRequest, { params }: RouteContext) {
     }
 
     await updateAppointmentForProvider(supabase, provider.id, id, { status: "cancelled" });
+    const admin = createAdminClient();
+    await syncPatientProviderRelationship(admin, appointment.patient_id, provider.id);
     const patientUserId = Array.isArray(appointment.patients) ? appointment.patients[0]?.user_id : appointment.patients?.user_id;
     const notifications: NotificationInput[] = [
       ...(patientUserId
@@ -67,7 +70,6 @@ export async function POST(_request: NextRequest, { params }: RouteContext) {
           }]
         : []),
     ];
-    const admin = createAdminClient();
     await createNotifications(admin, notifications);
     return NextResponse.json({ ok: true });
   }
@@ -87,6 +89,8 @@ export async function POST(_request: NextRequest, { params }: RouteContext) {
   }
 
   await updateAppointmentForPatient(supabase, patient.id, id, { status: "cancelled" });
+  const admin = createAdminClient();
+  await syncPatientProviderRelationship(admin, patient.id, appointment.provider_id);
   const providerUserId = Array.isArray(appointment.providers) ? appointment.providers[0]?.user_id : appointment.providers?.user_id;
   const notifications: NotificationInput[] = [
     {
@@ -108,7 +112,6 @@ export async function POST(_request: NextRequest, { params }: RouteContext) {
         }]
       : []),
   ];
-  const admin = createAdminClient();
   await createNotifications(admin, notifications);
   return NextResponse.json({ ok: true });
 }

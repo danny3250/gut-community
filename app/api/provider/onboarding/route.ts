@@ -7,7 +7,8 @@ type OnboardingPayload = {
   legalName?: string;
   displayName?: string;
   credentials?: string | null;
-  specialty?: string | null;
+  specialtySlugs?: string[];
+  conditionFocusSlugs?: string[];
   bio?: string | null;
   statesServed?: string[];
   licenseStates?: string[];
@@ -49,13 +50,28 @@ export async function POST(request: NextRequest) {
 
     const statesServed = normalizeStateList(payload.statesServed);
     const licenseStates = normalizeStateList(payload.licenseStates?.length ? payload.licenseStates : payload.statesServed);
+    const specialtySlugs = Array.from(new Set((payload.specialtySlugs ?? []).map((value) => value.trim()).filter(Boolean)));
+    const conditionFocusSlugs = Array.from(new Set((payload.conditionFocusSlugs ?? []).map((value) => value.trim()).filter(Boolean)));
+    const [{ data: specialties }, { data: conditions }] = await Promise.all([
+      specialtySlugs.length
+        ? supabase.from("specialties").select("name,slug").in("slug", specialtySlugs)
+        : Promise.resolve({ data: [] as Array<{ name: string; slug: string }> }),
+      conditionFocusSlugs.length
+        ? supabase.from("conditions").select("name,slug").in("slug", conditionFocusSlugs)
+        : Promise.resolve({ data: [] as Array<{ name: string; slug: string }> }),
+    ]);
+
+    const specialtyNames = (specialties ?? []).map((item) => item.name);
+    const conditionNames = (conditions ?? []).map((item) => item.name);
 
     const applicationPayload = {
       user_id: user.id,
       full_name: payload.legalName?.trim() || payload.displayName.trim(),
       display_name: payload.displayName.trim(),
       credentials: payload.credentials?.trim() || null,
-      specialty: payload.specialty?.trim() || null,
+      specialty: specialtyNames[0] ?? null,
+      specialty_slugs: specialtySlugs,
+      condition_focus_slugs: conditionFocusSlugs,
       bio: payload.bio?.trim() || null,
       states_served: statesServed,
       license_states: licenseStates,
@@ -113,11 +129,13 @@ export async function POST(request: NextRequest) {
       action: "provider_application_submitted",
       entity_type: "provider_application",
       entity_id: applicationRow.id,
-      metadata_json: {
-        application_status: "pending",
-        states_served: statesServed,
-        telehealth_enabled: payload.telehealthEnabled ?? true,
-      },
+        metadata_json: {
+          application_status: "pending",
+          specialties: specialtyNames,
+          condition_focus: conditionNames,
+          states_served: statesServed,
+          telehealth_enabled: payload.telehealthEnabled ?? true,
+        },
     });
 
     if (auditError) {

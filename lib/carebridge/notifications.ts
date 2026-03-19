@@ -13,7 +13,8 @@ export type NotificationType =
   | "provider_rejected"
   | "provider_suspended"
   | "message_received"
-  | "document_uploaded";
+  | "document_uploaded"
+  | "care_summary_available";
 
 export type NotificationRecord = {
   id: string;

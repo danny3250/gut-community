@@ -4,14 +4,18 @@ import { getCurrentUserWithRole } from "@/lib/auth/session";
 import { getUnreadNotificationCount } from "@/lib/carebridge/notifications";
 import { isAdmin, isProvider } from "@/lib/auth/roles";
 import { fetchProviderApplicationByUserId, fetchProviderByUserId, hasActiveProviderAccess } from "@/lib/carebridge/providers";
+import { PRODUCT_LABELS } from "@/lib/carebridge/taxonomy";
 
 const providerLinks = [
   { href: "/provider", label: "Dashboard" },
   { href: "/provider/schedule", label: "Schedule" },
+  { href: "/provider/appointments", label: PRODUCT_LABELS.appointments },
   { href: "/provider/patients", label: "Patients" },
-  { href: "/provider/messages", label: "Messages" },
-  { href: "/provider/notifications", label: "Notifications" },
+  { href: "/provider/messages", label: PRODUCT_LABELS.messages },
+  { href: "/provider/notes", label: "Notes" },
+  { href: "/provider/notifications", label: PRODUCT_LABELS.notifications },
   { href: "/provider/community", label: "Community" },
+  { href: "/provider/resources", label: "Resources" },
   { href: "/provider/settings", label: "Settings" },
 ] as const;
 
@@ -45,16 +49,17 @@ export default async function ProviderLayout({ children }: { children: React.Rea
 
   return (
     <CareWorkspaceShell
-      areaLabel="Provider Portal"
+      areaLabel={PRODUCT_LABELS.providerWorkspace}
       title={hasActiveAccess ? "CareBridge provider access" : "CareBridge provider application"}
       description={
         hasActiveAccess
-          ? "Scheduling, patient review, visit launch, and communication tools for approved providers."
+          ? "Scheduling, patient review, visit documentation, and communication tools for approved providers."
           : "Track your application status, update your information, and prepare for provider review."
       }
       email={user.email ?? null}
       primaryLinks={resolvedPrimaryLinks}
       secondaryLinks={secondaryLinks}
+      showHeaderNavigation={false}
     >
       {children}
     </CareWorkspaceShell>

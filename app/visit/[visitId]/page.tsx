@@ -1,6 +1,10 @@
 import { notFound, redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
-import { fetchProviderVisitNoteForAppointment } from "@/lib/carebridge/provider-notes";
+import {
+  fetchProviderVisitNoteForAppointment,
+  fetchRecentProviderNotesForPatient,
+} from "@/lib/carebridge/provider-notes";
+import { fetchProviderFollowUpForAppointment } from "@/lib/carebridge/follow-ups";
 import { fetchVisitWithContext } from "@/lib/carebridge/visits";
 import { Role } from "@/lib/auth/roles";
 import { TelehealthVisitService } from "@/services/telehealth/service";
@@ -53,10 +57,14 @@ export default async function VisitPage({ params }: VisitPageProps) {
     participantRole === "admin"
       ? visitContext
       : await service.enterVisit(visitId, participantRole === "provider" ? "provider" : "patient");
-  const providerNote =
-    provider?.id && appointment?.id
-      ? await fetchProviderVisitNoteForAppointment(supabase, provider.id, appointment.id)
-      : null;
+  const [providerNote, followUp, recentNotes] =
+    provider?.id && appointment?.id && patient?.id
+      ? await Promise.all([
+          fetchProviderVisitNoteForAppointment(supabase, provider.id, appointment.id),
+          fetchProviderFollowUpForAppointment(supabase, provider.id, appointment.id),
+          fetchRecentProviderNotesForPatient(supabase, provider.id, patient.id, 6),
+        ])
+      : [null, null, []];
 
   return (
     <main className="shell py-6 sm:py-10">
@@ -64,6 +72,9 @@ export default async function VisitPage({ params }: VisitPageProps) {
         visitId={visitId}
         participantRole={participantRole}
         initialStatus={updatedVisit.status}
+        initialPatientJoinedAt={updatedVisit.patient_joined_at}
+        initialProviderJoinedAt={updatedVisit.provider_joined_at}
+        initialEndedAt={updatedVisit.ended_at}
         providerName={provider?.display_name ?? "Provider"}
         patientName={patient?.legal_name ?? patient?.email ?? "Patient"}
         appointmentType={appointment?.appointment_type ?? "telehealth"}
@@ -80,6 +91,19 @@ export default async function VisitPage({ params }: VisitPageProps) {
         appointmentId={appointment?.id ?? null}
         patientId={patient?.id ?? null}
         initialNote={providerNote}
+        initialFollowUp={followUp}
+        recentNotes={recentNotes}
+        currentAppointmentSummary={
+          appointment
+            ? {
+                id: appointment.id,
+                startTime: appointment.start_time,
+                timezone: appointment.timezone,
+                appointmentType: appointment.appointment_type,
+                status: appointment.status,
+              }
+            : null
+        }
       />
     </main>
   );

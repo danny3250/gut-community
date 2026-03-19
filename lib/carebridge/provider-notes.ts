@@ -16,6 +16,25 @@ export type ProviderVisitNoteInput = {
   editorUserId: string;
 };
 
+export type ProviderVisitNoteWithAppointment = ProviderVisitNoteRecord & {
+  appointments?:
+    | {
+        id: string;
+        start_time: string;
+        timezone: string;
+        appointment_type: string;
+        status: string;
+      }
+    | {
+        id: string;
+        start_time: string;
+        timezone: string;
+        appointment_type: string;
+        status: string;
+      }[]
+    | null;
+};
+
 export async function fetchProviderVisitNoteForAppointment(
   supabase: SupabaseClient,
   providerId: string,
@@ -121,24 +140,30 @@ export async function fetchRecentProviderNotesForPatient(
     .limit(limit);
 
   if (error) throw error;
-  return (data ?? []) as (ProviderVisitNoteRecord & {
-    appointments?:
-      | {
-          id: string;
-          start_time: string;
-          timezone: string;
-          appointment_type: string;
-          status: string;
-        }
-      | {
-          id: string;
-          start_time: string;
-          timezone: string;
-          appointment_type: string;
-          status: string;
-        }[]
-      | null;
-  })[];
+  return (data ?? []) as ProviderVisitNoteWithAppointment[];
+}
+
+export async function fetchRecentProviderNotes(
+  supabase: SupabaseClient,
+  providerId: string,
+  limit = 20
+) {
+  const { data, error } = await supabase
+    .from("provider_visit_notes")
+    .select(`${NOTE_SELECT},appointments(id,start_time,timezone,appointment_type,status),patients(id,legal_name,email)`)
+    .eq("provider_id", providerId)
+    .order("updated_at", { ascending: false })
+    .limit(limit);
+
+  if (error) throw error;
+  return (data ?? []) as Array<
+    ProviderVisitNoteWithAppointment & {
+      patients?:
+        | { id: string; legal_name: string | null; email: string | null }
+        | { id: string; legal_name: string | null; email: string | null }[]
+        | null;
+    }
+  >;
 }
 
 export function getProviderVisitNotePreview(noteBody: string, length = 140) {

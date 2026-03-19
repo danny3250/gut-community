@@ -31,7 +31,7 @@ export default async function LoginPage({
         </section>
 
         <section className="panel-strong px-6 py-8 sm:px-8">
-          <LoginForm nextHref={resolvedSearchParams.next || "/portal"} />
+          <LoginForm nextHref={resolvedSearchParams.next} />
         </section>
       </div>
     </main>

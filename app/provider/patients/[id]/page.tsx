@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
+import PatientAnalyticsPanel from "./PatientAnalyticsPanel";
 import { createClient } from "@/lib/supabase/server";
 import { getPatientCheckinSummaryForProvider } from "@/lib/carebridge/checkins";
 import { fetchRecentProviderNotesForPatient, getProviderVisitNotePreview } from "@/lib/carebridge/provider-notes";
@@ -40,13 +41,50 @@ export default async function ProviderPatientDetailPage({ params }: ProviderPati
         </p>
       </section>
 
-      <section className="grid gap-4 lg:grid-cols-5">
-        <SummaryCard label="Recent average feeling" value={detail.trends.averageFeeling ? `${detail.trends.averageFeeling} / 5` : "No data"} />
-        <SummaryCard label="Average sleep" value={detail.trends.averageSleepHours ? `${detail.trends.averageSleepHours} hrs` : "No data"} />
-        <SummaryCard label="Average stress" value={detail.trends.averageStressLevel ? `${detail.trends.averageStressLevel} / 5` : "No data"} />
-        <TrendList title="Top symptoms" items={detail.trends.symptomFrequency.map((item) => `${item.name} (${item.count})`)} emptyText="No symptoms logged yet." />
-        <TrendList title="Recent foods" items={detail.trends.recentFoods.map((item) => `${item.name} (${item.count})`)} emptyText="No foods logged yet." />
+      <section className="grid gap-4 xl:grid-cols-[1.05fr_0.95fr]">
+        <SummaryPanel
+          title="Recent check-in overview"
+          items={[
+            {
+              label: "Average feeling",
+              value: detail.analytics.overview.averageFeeling ? `${detail.analytics.overview.averageFeeling} / 5` : "No data",
+              helper: formatDirection(detail.analytics.overview.feelingDirection, "vs earlier check-ins"),
+            },
+            {
+              label: "Average sleep",
+              value: detail.analytics.overview.averageSleepHours ? `${detail.analytics.overview.averageSleepHours} hrs` : "No data",
+              helper: formatDirection(detail.analytics.overview.sleepDirection, "recent sleep trend"),
+            },
+            {
+              label: "Average stress",
+              value: detail.analytics.overview.averageStressLevel ? `${detail.analytics.overview.averageStressLevel} / 5` : "No data",
+              helper: formatDirection(detail.analytics.overview.stressDirection, "recent stress trend"),
+            },
+          ]}
+        />
+        <SummaryPanel
+          title="Recurring patterns"
+          items={[
+            {
+              label: "Common symptom",
+              value: detail.analytics.overview.mostCommonSymptom ?? "No data",
+              helper: `${detail.analytics.overview.recentCheckinCount} recent check-ins`,
+            },
+            {
+              label: "Common food",
+              value: detail.analytics.overview.mostCommonFood ?? "No data",
+              helper: "Recent food pattern",
+            },
+          ]}
+        />
       </section>
+
+      <PatientAnalyticsPanel
+        feelingTrend={detail.analytics.feelingTrend}
+        sleepStressTrend={detail.analytics.sleepStressTrend}
+        symptomFrequency={detail.analytics.symptomFrequency}
+        foodFrequency={detail.analytics.foodFrequency}
+      />
 
       <section className="panel px-6 py-6 sm:px-8">
         <h2 className="text-2xl font-semibold">Recent check-ins</h2>
@@ -142,12 +180,26 @@ export default async function ProviderPatientDetailPage({ params }: ProviderPati
   );
 }
 
-function SummaryCard({ label, value }: { label: string; value: string }) {
+function SummaryPanel({
+  title,
+  items,
+}: {
+  title: string;
+  items: Array<{ label: string; value: string; helper: string }>;
+}) {
   return (
-    <div className="panel px-5 py-5">
-      <div className="text-xs font-semibold uppercase tracking-[0.18em] text-[var(--accent-strong)]">{label}</div>
-      <div className="mt-2 text-2xl font-semibold">{value}</div>
-    </div>
+    <section className="panel px-5 py-5">
+      <div className="text-sm font-semibold">{title}</div>
+      <div className={`mt-4 grid gap-4 ${items.length >= 3 ? "md:grid-cols-3" : "md:grid-cols-2"}`}>
+        {items.map((item) => (
+          <div key={item.label} className="rounded-[20px] border border-[var(--border)] bg-white/72 px-4 py-4">
+            <div className="text-xs font-semibold uppercase tracking-[0.18em] text-[var(--accent-strong)]">{item.label}</div>
+            <div className="mt-2 text-xl font-semibold">{item.value}</div>
+            <div className="mt-2 text-sm muted">{item.helper}</div>
+          </div>
+        ))}
+      </div>
+    </section>
   );
 }
 
@@ -166,4 +218,10 @@ function TrendList({ title, items, emptyText }: { title: string; items: string[]
       )}
     </div>
   );
+}
+
+function formatDirection(direction: "up" | "down" | "steady", context: string) {
+  if (direction === "up") return `Trending up ${context}`;
+  if (direction === "down") return `Trending down ${context}`;
+  return `Stable ${context}`;
 }

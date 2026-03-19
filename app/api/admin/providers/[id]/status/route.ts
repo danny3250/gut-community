@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { createNotification } from "@/lib/carebridge/notifications";
+import { syncProviderScopeForApprovedProvider } from "@/lib/carebridge/providers";
 import { getCurrentUserWithRole } from "@/lib/auth/session";
 
 type StatusPayload = {
@@ -14,12 +15,15 @@ type ProviderApplicationAdminRow = {
   status: string;
   organization_id: string | null;
   display_name: string | null;
+  specialty_slugs: string[] | null;
+  condition_focus_slugs: string[] | null;
   reviewed_at: string | null;
-  active_provider: {
-    id: string;
-    verification_status: string;
-    organization_id: string | null;
-  } | null;
+};
+
+type ActiveProviderRow = {
+  id: string;
+  verification_status: string;
+  organization_id: string | null;
 };
 
 export async function PATCH(
@@ -41,7 +45,7 @@ export async function PATCH(
   const admin = createAdminClient();
   const { data: application, error: applicationError } = await admin
     .from("provider_applications")
-    .select("id,user_id,status,organization_id,display_name,reviewed_at,active_provider:providers!providers_user_id_key(id,verification_status,organization_id)")
+    .select("id,user_id,status,organization_id,display_name,specialty_slugs,condition_focus_slugs,reviewed_at")
     .eq("id", id)
     .maybeSingle<ProviderApplicationAdminRow>();
 
@@ -49,180 +53,108 @@ export async function PATCH(
     return NextResponse.json({ error: applicationError?.message ?? "Provider application not found." }, { status: 404 });
   }
 
-  const scopedOrganizationId = application.active_provider?.organization_id ?? application.organization_id;
+  const { data: activeProvider, error: providerError } = await admin
+    .from("providers")
+    .select("id,verification_status,organization_id")
+    .eq("user_id", application.user_id)
+    .maybeSingle<ActiveProviderRow>();
+
+  if (providerError) {
+    return NextResponse.json({ error: providerError.message }, { status: 400 });
+  }
+
+  const scopedOrganizationId = activeProvider?.organization_id ?? application.organization_id;
   if (role !== "admin" && organizationId && scopedOrganizationId && scopedOrganizationId !== organizationId) {
     return NextResponse.json({ error: "You can only review providers in your organization." }, { status: 403 });
   }
 
   try {
-    if (payload.status === "approved") {
-      const { data: providerId, error } = await admin.rpc("approve_provider_application", {
-        target_application_id: id,
-        reviewer_user_id: user.id,
-      });
+    const { data: providerId, error: statusError } = await admin.rpc("admin_set_provider_application_status", {
+      target_application_id: id,
+      next_status: payload.status,
+      admin_user_id: user.id,
+      rejection_note: payload.rejectionReason?.trim() || null,
+    });
 
-      if (error) {
-        return NextResponse.json({ error: error.message }, { status: 400 });
-      }
-
-      await admin.from("audit_logs").insert({
-        actor_user_id: user.id,
-        actor_role: role,
-        action: "provider_application_approved",
-        entity_type: "provider_application",
-        entity_id: id,
-        metadata_json: {
-          previous_status: application.status,
-          next_status: "approved",
-          provider_id: providerId ?? null,
-        },
-      });
-
-      await createNotification(admin, {
-        userId: application.user_id,
-        type: "provider_verified",
-        title: "Provider profile verified",
-        body: "Your provider profile is now active. You can access provider tools, appear in the directory, and accept bookings.",
-        linkUrl: "/provider",
-        metadata: {
-          provider_application_id: id,
-          provider_id: providerId ?? null,
-          previous_status: application.status,
-          next_status: "approved",
-        },
-      });
-
-      return NextResponse.json({ ok: true });
+    if (statusError) {
+      return NextResponse.json({ error: statusError.message }, { status: 400 });
     }
 
-    if (payload.status === "rejected") {
-      const rejectionReason = payload.rejectionReason?.trim() || null;
-      const { error } = await admin.rpc("reject_provider_application", {
-        target_application_id: id,
-        reviewer_user_id: user.id,
-        rejection_note: rejectionReason,
-      });
-
-      if (error) {
-        return NextResponse.json({ error: error.message }, { status: 400 });
-      }
-
-      await admin.from("audit_logs").insert({
-        actor_user_id: user.id,
-        actor_role: role,
-        action: "provider_application_rejected",
-        entity_type: "provider_application",
-        entity_id: id,
-        metadata_json: {
-          previous_status: application.status,
-          next_status: "rejected",
-          rejection_reason: rejectionReason,
-        },
-      });
-
-      await createNotification(admin, {
-        userId: application.user_id,
-        type: "provider_rejected",
-        title: "Provider application not approved",
-        body: rejectionReason || "Review the notes on your application, update your information, and resubmit when you are ready.",
-        linkUrl: "/provider",
-        metadata: {
-          provider_application_id: id,
-          previous_status: application.status,
-          next_status: "rejected",
-        },
-      });
-
-      return NextResponse.json({ ok: true });
+    if (payload.status === "approved" && providerId) {
+      await syncProviderScopeForApprovedProvider(
+        admin,
+        providerId,
+        application.specialty_slugs ?? [],
+        application.condition_focus_slugs ?? []
+      );
     }
 
-    if (payload.status === "pending") {
-      if (application.active_provider) {
-        return NextResponse.json({ error: "Active providers cannot be moved back to pending from this action." }, { status: 400 });
-      }
+    const nextAuditAction =
+      payload.status === "approved"
+        ? "provider_application_approved"
+        : payload.status === "pending"
+          ? "provider_application_reopened"
+          : payload.status === "rejected"
+            ? "provider_application_rejected"
+            : "provider_suspended";
 
-      const { error } = await admin
-        .from("provider_applications")
-        .update({
-          status: "pending",
-          reviewed_at: null,
-          reviewed_by_user_id: null,
-          rejection_reason: null,
-          submitted_at: new Date().toISOString(),
-          updated_at: new Date().toISOString(),
-        })
-        .eq("id", id);
+    await admin.from("audit_logs").insert({
+      actor_user_id: user.id,
+      actor_role: role,
+      action: nextAuditAction,
+      entity_type: payload.status === "suspended" ? "provider" : "provider_application",
+      entity_id: payload.status === "suspended" ? (providerId ?? id) : id,
+      metadata_json: {
+        provider_application_id: id,
+        provider_id: providerId ?? null,
+        previous_status: application.status,
+        next_status: payload.status,
+        rejection_reason: payload.rejectionReason?.trim() || null,
+      },
+    });
 
-      if (error) {
-        return NextResponse.json({ error: error.message }, { status: 400 });
-      }
+    const notificationType =
+      payload.status === "approved"
+        ? "provider_verified"
+        : payload.status === "pending"
+          ? "provider_application_received"
+          : payload.status === "rejected"
+            ? "provider_rejected"
+            : "provider_suspended";
 
-      await admin.from("audit_logs").insert({
-        actor_user_id: user.id,
-        actor_role: role,
-        action: "provider_application_reopened",
-        entity_type: "provider_application",
-        entity_id: id,
-        metadata_json: {
-          previous_status: application.status,
-          next_status: "pending",
-        },
-      });
+    const notificationTitle =
+      payload.status === "approved"
+        ? "Provider profile verified"
+        : payload.status === "pending"
+          ? "Provider application moved back to review"
+          : payload.status === "rejected"
+            ? "Provider application not approved"
+            : "Provider access suspended";
 
-      return NextResponse.json({ ok: true });
-    }
+    const notificationBody =
+      payload.status === "approved"
+        ? "Your provider profile is now active. You can access provider tools, appear in the directory, and accept bookings."
+        : payload.status === "pending"
+          ? "Your provider profile has been moved back to pending review. Public listing and bookings are paused until approval."
+          : payload.status === "rejected"
+            ? payload.rejectionReason?.trim() || "Review the notes on your application, update your information, and resubmit when you are ready."
+            : "Your public listing, bookings, and provider tools are temporarily paused.";
 
-    if (payload.status === "suspended") {
-      if (!application.active_provider) {
-        return NextResponse.json({ error: "Only active providers can be suspended." }, { status: 400 });
-      }
+    await createNotification(admin, {
+      userId: application.user_id,
+      type: notificationType,
+      title: notificationTitle,
+      body: notificationBody,
+      linkUrl: "/provider",
+      metadata: {
+        provider_application_id: id,
+        provider_id: providerId ?? null,
+        previous_status: application.status,
+        next_status: payload.status,
+      },
+    });
 
-      const now = new Date().toISOString();
-      const { error } = await admin
-        .from("providers")
-        .update({
-          verification_status: "suspended",
-          verified_at: null,
-          verified_by_user_id: user.id,
-          updated_at: now,
-        })
-        .eq("id", application.active_provider.id);
-
-      if (error) {
-        return NextResponse.json({ error: error.message }, { status: 400 });
-      }
-
-      await admin.from("audit_logs").insert({
-        actor_user_id: user.id,
-        actor_role: role,
-        action: "provider_suspended",
-        entity_type: "provider",
-        entity_id: application.active_provider.id,
-        metadata_json: {
-          provider_application_id: id,
-          previous_status: application.active_provider.verification_status,
-          next_status: "suspended",
-        },
-      });
-
-      await createNotification(admin, {
-        userId: application.user_id,
-        type: "provider_suspended",
-        title: "Provider access suspended",
-        body: "Your public listing, bookings, and provider tools are temporarily paused.",
-        linkUrl: "/provider",
-        metadata: {
-          provider_application_id: id,
-          provider_id: application.active_provider.id,
-          previous_status: application.active_provider.verification_status,
-          next_status: "suspended",
-        },
-      });
-
-      return NextResponse.json({ ok: true });
-    }
-
-    return NextResponse.json({ error: "Unsupported provider status." }, { status: 400 });
+    return NextResponse.json({ ok: true });
   } catch (error) {
     console.error("[admin/provider-status] Failed to update provider application", {
       applicationId: id,

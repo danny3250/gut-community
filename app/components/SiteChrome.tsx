@@ -1,5 +1,6 @@
 "use client";
 
+import Image from "next/image";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useEffect, useState } from "react";
@@ -13,6 +14,7 @@ type SiteChromeProps = {
 };
 
 const PRIVATE_PREFIXES = ["/portal", "/provider", "/admin"];
+const FOOTERLESS_PREFIXES = ["/visit"];
 const FOOTER_COLUMNS = [
   {
     heading: "Patients",
@@ -57,6 +59,7 @@ export default function SiteChrome({ children, isAuthenticated, userEmail }: Sit
   const pathname = usePathname();
   const [menuOpen, setMenuOpen] = useState(false);
   const [scrolled, setScrolled] = useState(false);
+  const hideFooter = FOOTERLESS_PREFIXES.some((prefix) => pathname === prefix || pathname.startsWith(`${prefix}/`));
 
   useEffect(() => {
     function onScroll() {
@@ -88,10 +91,21 @@ export default function SiteChrome({ children, isAuthenticated, userEmail }: Sit
             <nav aria-label="Primary">
               <div className="flex items-center justify-between gap-4">
                 <Link href="/" className="min-w-0">
-                  <div className="text-[11px] font-semibold uppercase tracking-[0.22em] text-[var(--accent-strong)]">
-                    {BRAND.tagline}
+                  <div className="flex items-center gap-3">
+                    <Image
+                      src="/images/carebridge-logo.png"
+                      alt="CareBridge"
+                      width={60}
+                      height={60}
+                      className="h-14 w-14 rounded-[12px] object-contain"
+                    />
+                    <div className="min-w-0">
+                      <div className="hero-tagline text-[11px] font-semibold uppercase tracking-[0.22em] text-[var(--accent-strong)]">
+                        Making Healthcare Easier to Reach
+                      </div>
+                    <div className="hero-wordmark mt-1 text-3xl font-semibold sm:text-[2.4rem]">{BRAND.name}</div>
+                    </div>
                   </div>
-                  <div className="mt-1 text-2xl font-semibold sm:text-[2rem]">{BRAND.name}</div>
                 </Link>
 
                 <div className="hidden items-center gap-1 text-sm lg:flex">
@@ -117,14 +131,14 @@ export default function SiteChrome({ children, isAuthenticated, userEmail }: Sit
                       <Link href="/portal" className="btn-primary">
                         Open portal
                       </Link>
-                      {userEmail ? <span className="rounded-full bg-white/70 px-4 py-2 text-sm muted">{userEmail}</span> : null}
+                      {userEmail ? <span className="rounded-[14px] bg-white/70 px-4 py-2 text-sm muted">{userEmail}</span> : null}
                       <SignOutButton />
                     </>
                   ) : (
                     <>
                       <Link
                         href="/login"
-                        className="rounded-full px-4 py-2 text-sm font-semibold outline-none hover:bg-white/70 focus-visible:ring-2 focus-visible:ring-[var(--accent)]"
+                        className="rounded-[14px] px-4 py-2 text-sm font-semibold outline-none hover:bg-white/70 focus-visible:ring-2 focus-visible:ring-[var(--accent)]"
                       >
                         Sign in
                       </Link>
@@ -146,7 +160,7 @@ export default function SiteChrome({ children, isAuthenticated, userEmail }: Sit
                     aria-controls="mobile-site-menu"
                     aria-label={menuOpen ? "Close navigation menu" : "Open navigation menu"}
                     onClick={() => setMenuOpen((open) => !open)}
-                    className="inline-flex h-11 w-11 items-center justify-center rounded-full border border-[var(--border)] bg-white/72 outline-none hover:bg-white focus-visible:ring-2 focus-visible:ring-[var(--accent)]"
+                    className="inline-flex h-11 w-11 items-center justify-center rounded-[14px] border border-[var(--border)] bg-white/72 outline-none hover:bg-white focus-visible:ring-2 focus-visible:ring-[var(--accent)]"
                   >
                     <span className="sr-only">Toggle navigation</span>
                     <span className="flex w-5 flex-col gap-1.5">
@@ -210,49 +224,62 @@ export default function SiteChrome({ children, isAuthenticated, userEmail }: Sit
         </div>
       </header>
 
-      <main className="pb-16">{children}</main>
+      <main className={hideFooter ? "pb-0" : "pb-16"}>{children}</main>
 
-      <footer className="shell pb-10">
-        <div className="rounded-[32px] border border-[var(--border)] bg-[rgba(255,252,246,0.92)] px-6 py-8 shadow-[0_22px_46px_rgba(97,84,58,0.08)] sm:px-8">
-          <div className="grid gap-8 lg:grid-cols-[1.15fr_repeat(4,minmax(0,1fr))]">
-            <div>
-              <div className="text-[11px] font-semibold uppercase tracking-[0.22em] text-[var(--accent-strong)]">
-                {BRAND.tagline}
-              </div>
-              <div className="mt-2 text-2xl font-semibold text-[var(--foreground)]">{BRAND.name}</div>
-              <div className="mt-3 max-w-xs text-sm leading-6 muted">{BRAND.shortDescription}</div>
-              <div className="mt-5 flex flex-wrap gap-3">
-                <Link href="/providers" className="btn-secondary px-4 py-2 text-sm">
-                  Find care
-                </Link>
-                <Link href="/providers/join" className="btn-primary px-4 py-2 text-sm">
-                  Provider entry
-                </Link>
-              </div>
-            </div>
-
-            {FOOTER_COLUMNS.map((column) => (
-              <div key={column.heading}>
-                <div className="text-xs font-semibold uppercase tracking-[0.18em] text-[var(--accent-strong)]">
-                  {column.heading}
-                </div>
-                <div className="mt-4 space-y-3 text-sm">
-                  {column.links.map((link) => (
-                    <div key={link.href}>
-                      <Link href={link.href} className="muted transition-colors hover:text-[var(--foreground)]">
-                        {link.label}
-                      </Link>
+      {hideFooter ? null : (
+        <footer className="shell pb-10">
+          <div className="rounded-[18px] border border-[var(--border)] bg-[rgba(255,252,246,0.92)] px-6 py-8 shadow-[0_16px_34px_rgba(97,84,58,0.07)] sm:px-8">
+            <div className="grid gap-8 lg:grid-cols-[1.15fr_repeat(4,minmax(0,1fr))]">
+              <div>
+                <div className="flex items-center gap-3">
+                  <Image
+                    src="/images/carebridge-logo.png"
+                    alt="CareBridge"
+                    width={48}
+                    height={48}
+                    className="h-11 w-11 rounded-[10px] object-contain"
+                  />
+                  <div>
+                    <div className="text-[11px] font-semibold uppercase tracking-[0.22em] text-[var(--accent-strong)]">
+                      Making Healthcare Easier to Reach
                     </div>
-                  ))}
+                    <div className="mt-1 text-2xl font-semibold text-[var(--foreground)]">{BRAND.name}</div>
+                  </div>
+                </div>
+                <div className="mt-3 max-w-xs text-sm leading-6 muted">{BRAND.shortDescription}</div>
+                <div className="mt-5 flex flex-wrap gap-3">
+                  <Link href="/providers" className="btn-secondary px-4 py-2 text-sm">
+                    Find care
+                  </Link>
+                  <Link href="/providers/join" className="btn-primary px-4 py-2 text-sm">
+                    Provider entry
+                  </Link>
                 </div>
               </div>
-            ))}
+
+              {FOOTER_COLUMNS.map((column) => (
+                <div key={column.heading}>
+                  <div className="text-xs font-semibold uppercase tracking-[0.18em] text-[var(--accent-strong)]">
+                    {column.heading}
+                  </div>
+                  <div className="mt-4 space-y-3 text-sm">
+                    {column.links.map((link) => (
+                      <div key={link.href}>
+                        <Link href={link.href} className="muted transition-colors hover:text-[var(--foreground)]">
+                          {link.label}
+                        </Link>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              ))}
+            </div>
+            <div className="mt-8 border-t border-[var(--border)] pt-5 text-sm muted">
+              Public resources remain open to browse. Patient, provider, and admin workspaces stay protected inside secure CareBridge portals.
+            </div>
           </div>
-          <div className="mt-8 border-t border-[var(--border)] pt-5 text-sm muted">
-            Public resources remain open to browse. Patient, provider, and admin workspaces stay protected inside secure CareBridge portals.
-          </div>
-        </div>
-      </footer>
+        </footer>
+      )}
     </div>
   );
 }

@@ -3,8 +3,13 @@ import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import ProviderOnboardingForm from "./ProviderOnboardingForm";
 import {
+  CONDITION_FOCUS_TAXONOMY,
+  PROVIDER_SPECIALTY_TAXONOMY,
+} from "@/lib/carebridge/taxonomy";
+import {
   fetchProviderApplicationByUserId,
   fetchProviderByUserId,
+  fetchProviderScopeOptions,
   getProviderApplicationMessage,
   getProviderVerificationMessage,
 } from "@/lib/carebridge/providers";
@@ -17,10 +22,11 @@ export default async function ProviderOnboardingPage() {
 
   if (!user) redirect("/login?next=/providers/join/apply");
 
-  const [provider, application, organizations] = await Promise.all([
+  const [provider, application, organizations, scopeOptions] = await Promise.all([
     fetchProviderByUserId(supabase, user.id),
     fetchProviderApplicationByUserId(supabase, user.id),
     supabase.from("organizations").select("id,name").order("name", { ascending: true }),
+    fetchProviderScopeOptions(supabase),
   ]);
 
   const statusLabel = provider?.verification_status ?? application?.status ?? "draft";
@@ -58,6 +64,16 @@ export default async function ProviderOnboardingPage() {
           application={application}
           provider={provider}
           organizations={(organizations.data ?? []) as Array<{ id: string; name: string }>}
+          specialties={
+            scopeOptions.specialties.length > 0
+              ? scopeOptions.specialties
+              : PROVIDER_SPECIALTY_TAXONOMY.map((item) => ({ ...item, id: item.slug }))
+          }
+          conditions={
+            scopeOptions.conditions.length > 0
+              ? scopeOptions.conditions
+              : CONDITION_FOCUS_TAXONOMY.map((item) => ({ ...item, id: item.slug }))
+          }
         />
       </div>
     </main>

@@ -41,7 +41,9 @@ as $$
 declare
   jwt_role text := current_setting('request.jwt.claim.role', true);
 begin
-  if public.is_admin_role() or jwt_role = 'service_role' then
+  if current_setting('app.provider_application_bootstrap', true) = 'on'
+    or public.is_admin_role()
+    or jwt_role = 'service_role' then
     return new;
   end if;
 
@@ -310,6 +312,8 @@ $$;
 grant execute on function public.approve_provider_application(uuid, uuid) to authenticated;
 grant execute on function public.reject_provider_application(uuid, uuid, text) to authenticated;
 
+select set_config('app.provider_application_bootstrap', 'on', true);
+
 insert into public.provider_applications (
   user_id,
   full_name,
@@ -387,6 +391,8 @@ set full_name = coalesce(public.provider_applications.full_name, excluded.full_n
 
 delete from public.providers
 where verification_status not in ('verified', 'suspended');
+
+select set_config('app.provider_application_bootstrap', 'off', true);
 
 select set_config('app.allow_profile_role_assignment', 'on', true);
 

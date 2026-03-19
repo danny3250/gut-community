@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { createClient } from "@/lib/supabase/server";
 import { createNotifications, type NotificationInput } from "@/lib/carebridge/notifications";
+import { syncPatientProviderRelationship } from "@/lib/carebridge/relationships";
 import { fetchProviderByUserId } from "@/lib/carebridge/providers";
 import { fetchProviderAppointmentById, updateAppointmentForProvider } from "@/lib/carebridge/appointments";
 
@@ -42,6 +43,8 @@ export async function POST(request: NextRequest, { params }: RouteContext) {
   }
 
   await updateAppointmentForProvider(supabase, provider.id, id, { status: payload.status });
+  const admin = createAdminClient();
+  await syncPatientProviderRelationship(admin, appointment.patient_id, provider.id);
   const patientUserId = Array.isArray(appointment.patients) ? appointment.patients[0]?.user_id : appointment.patients?.user_id;
   if (patientUserId) {
     const notifications: NotificationInput[] = [
@@ -63,7 +66,6 @@ export async function POST(request: NextRequest, { params }: RouteContext) {
         metadata: { appointment_id: id, status: payload.status },
       },
     ];
-    const admin = createAdminClient();
     await createNotifications(admin, notifications);
   }
   return NextResponse.json({ ok: true });

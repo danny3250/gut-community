@@ -5,6 +5,7 @@ import { createAppointment } from "@/lib/carebridge/appointments";
 import { getRequiredFormTypesForAppointment } from "@/lib/carebridge/forms";
 import { buildAppointmentReminderSchedule, createNotifications, type NotificationInput } from "@/lib/carebridge/notifications";
 import { getOrCreatePatientRecord } from "@/lib/carebridge/patients";
+import { syncPatientProviderRelationship } from "@/lib/carebridge/relationships";
 import { getAvailableSlots } from "@/lib/carebridge/scheduling";
 import { canProviderAcceptBookings, fetchProviderById, isProviderVerified } from "@/lib/carebridge/providers";
 import { Role } from "@/lib/auth/roles";
@@ -118,6 +119,8 @@ export async function POST(request: NextRequest) {
     endIso: payload.endIso,
     timezone: payload.timezone,
   });
+  const admin = createAdminClient();
+  await syncPatientProviderRelationship(admin, patientId, payload.providerId);
 
   await supabase.from("audit_logs").insert({
     actor_user_id: user.id,
@@ -140,7 +143,6 @@ export async function POST(request: NextRequest) {
   const requiredFormTypes = getRequiredFormTypesForAppointment(payload.appointmentType);
   const reminderNotifications = buildAppointmentReminderSchedule(payload.startIso);
 
-  const admin = createAdminClient();
   const notifications: NotificationInput[] = [
     {
       userId: user.id,
