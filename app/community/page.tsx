@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
-import { fetchCommunityPosts, getCommunityTopics } from "@/lib/community";
+import { fetchCommunityPosts, getCommunityPostBadge, getCommunityTopics } from "@/lib/community";
 
 type CommunityPageProps = {
   searchParams: Promise<{ topic?: string }>;
@@ -85,9 +85,9 @@ export default async function CommunityPage({ searchParams }: CommunityPageProps
               <article key={post.id} className="panel px-6 py-6 sm:px-8">
                 <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
                   <div className="max-w-3xl">
-                    {post.topic ? (
+                    {getCommunityPostBadge(post) ? (
                       <div className="mb-3 inline-flex rounded-full bg-[var(--accent-soft)] px-3 py-1 text-xs font-semibold text-[var(--accent-strong)]">
-                        {post.topic}
+                        {getCommunityPostBadge(post)}
                       </div>
                     ) : null}
                     <h2 className="text-2xl font-semibold">{post.title}</h2>

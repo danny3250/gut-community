@@ -1,4 +1,5 @@
 import Link from "next/link";
+import PublicBrandMark from "@/app/components/PublicBrandMark";
 
 const services = [
   { title: "Provider discovery", body: "Search by specialty, state served, and telehealth availability to find a good next step." },
@@ -10,12 +11,16 @@ const services = [
 export default function ServicesPage() {
   return (
     <main className="shell space-y-8 py-6 sm:space-y-10 sm:py-10">
-      <section className="panel px-6 py-8 sm:px-8">
-        <span className="eyebrow">Services</span>
-        <h1 className="mt-4 text-4xl font-semibold">Tools for finding care, preparing well, and staying connected.</h1>
-        <p className="mt-3 max-w-2xl text-base leading-7 muted">
-          CareBridge brings together the practical pieces around care access so patients and providers can spend less energy chasing logistics.
-        </p>
+      <section className="relative lg:grid lg:grid-cols-[24rem_minmax(0,1fr)] lg:items-start lg:gap-6">
+        <PublicBrandMark />
+        <div className="panel px-6 py-8 sm:px-8 lg:mt-4">
+          <span className="eyebrow">Services</span>
+          <h1 className="mt-4 text-4xl font-semibold">Tools for finding care, preparing well, and staying connected.</h1>
+          <p className="mt-3 max-w-2xl text-base leading-7 muted">
+            CareBridge brings together the practical pieces around care access so patients and providers can spend less
+            energy chasing logistics.
+          </p>
+        </div>
       </section>
       <section className="grid gap-4 lg:grid-cols-2">
         {services.map((item) => (

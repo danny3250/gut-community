@@ -9,12 +9,12 @@ export const BRAND = {
 
 export const PUBLIC_NAV_LINKS = [
   { href: "/", label: "Home" },
-  { href: "/about", label: "About" },
   { href: "/services", label: "Services" },
-  { href: "/providers", label: "Providers" },
   { href: "/resources", label: "Resources" },
   { href: "/community", label: "Community" },
   { href: "/recipes", label: "Recipes" },
+  { href: "/providers", label: "Providers" },
+  { href: "/about", label: "About" },
   { href: "/faq", label: "FAQ" },
   { href: "/contact", label: "Contact" },
 ];

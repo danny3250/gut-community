@@ -3,14 +3,21 @@
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { createClient } from "@/lib/supabase/client";
+import type { CommunitySource } from "@/lib/community";
 
 type ReplyComposerProps = {
   postId: string;
+  source: CommunitySource;
   canMarkOfficial: boolean;
   helperMessage?: string | null;
 };
 
-export default function ReplyComposer({ postId, canMarkOfficial, helperMessage = null }: ReplyComposerProps) {
+export default function ReplyComposer({
+  postId,
+  source,
+  canMarkOfficial,
+  helperMessage = null,
+}: ReplyComposerProps) {
   const supabase = createClient();
   const router = useRouter();
   const [body, setBody] = useState("");
@@ -32,15 +39,21 @@ export default function ReplyComposer({ postId, canMarkOfficial, helperMessage =
       return;
     }
 
-    const payload = {
-      post_id: postId,
-      author_user_id: user.id,
-      body: body.trim(),
-      verified_at: canMarkOfficial && markOfficial ? new Date().toISOString() : null,
-      is_provider_response: canMarkOfficial ? markOfficial : false,
-    };
-
-    const { error } = await supabase.from("community_replies").insert(payload);
+    const trimmedBody = body.trim();
+    const { error } =
+      source === "legacy_forum"
+        ? await supabase.from("forum_comments").insert({
+            post_id: postId,
+            created_by: user.id,
+            body: trimmedBody,
+          })
+        : await supabase.from("community_replies").insert({
+            post_id: postId,
+            author_user_id: user.id,
+            body: trimmedBody,
+            verified_at: canMarkOfficial && markOfficial ? new Date().toISOString() : null,
+            is_provider_response: canMarkOfficial ? markOfficial : false,
+          });
     setSaving(false);
 
     if (error) {

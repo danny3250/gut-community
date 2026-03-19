@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
+import PublicBrandMark from "@/app/components/PublicBrandMark";
 import { createClient } from "@/lib/supabase/client";
 import FavoritesDrawer from "./FavoritesDrawer";
 import SaveToggle from "./SaveToggle";
@@ -213,6 +214,7 @@ export default function RecipesPage() {
 
   return (
     <main className="shell space-y-6 py-6 sm:py-10">
+      <PublicBrandMark />
       <section className="panel flex flex-col gap-6 px-6 py-8 sm:px-8 lg:flex-row lg:items-end lg:justify-between">
         <div className="max-w-3xl">
           <span className="eyebrow">Recipes</span>

@@ -19,8 +19,6 @@ const FOOTER_COLUMNS = [
   {
     heading: "Patients",
     links: [
-      { href: "/providers", label: "Find a Provider" },
-      { href: "/services", label: "Book Appointments" },
       { href: "/resources", label: "Resources" },
       { href: "/community", label: "Community" },
       { href: "/recipes", label: "Recipes" },
@@ -29,7 +27,6 @@ const FOOTER_COLUMNS = [
   {
     heading: "Providers",
     links: [
-      { href: "/providers/join", label: "Join CareBridge" },
       { href: "/resources", label: "Provider Resources" },
       { href: "/services", label: "Telehealth Tools" },
       { href: "/faq", label: "Provider FAQ" },
@@ -59,7 +56,15 @@ export default function SiteChrome({ children, isAuthenticated, userEmail }: Sit
   const pathname = usePathname();
   const [menuOpen, setMenuOpen] = useState(false);
   const [scrolled, setScrolled] = useState(false);
-  const isHomePage = pathname === "/";
+  const isWideBrandPage =
+    pathname === "/" ||
+    pathname === "/services" ||
+    pathname === "/resources" ||
+    pathname === "/about" ||
+    pathname === "/faq" ||
+    pathname === "/contact" ||
+    pathname.startsWith("/providers") ||
+    pathname.startsWith("/recipes");
   const hideFooter = FOOTERLESS_PREFIXES.some((prefix) => pathname === prefix || pathname.startsWith(`${prefix}/`));
 
   useEffect(() => {
@@ -92,11 +97,11 @@ export default function SiteChrome({ children, isAuthenticated, userEmail }: Sit
             <nav
               aria-label="Primary"
               className={`flex items-center justify-between gap-6 lg:grid lg:items-center lg:gap-10 ${
-                isHomePage ? "lg:grid-cols-[1fr_auto_1fr]" : "lg:grid-cols-[auto_1fr_auto]"
+                isWideBrandPage ? "lg:grid-cols-[1fr_auto_1fr]" : "lg:grid-cols-[auto_1fr_auto]"
               }`}
             >
-              {isHomePage ? (
-                <div className="hidden lg:block lg:min-h-[1px]" aria-hidden="true" />
+              {isWideBrandPage ? (
+                <div className="hidden lg:block lg:h-16 lg:w-[20rem]" aria-hidden="true" />
               ) : (
                 <Link href="/" className="min-w-0 lg:justify-self-start">
                   <div className="flex items-center">
@@ -214,33 +219,19 @@ export default function SiteChrome({ children, isAuthenticated, userEmail }: Sit
 
       {hideFooter ? null : (
         <footer className="shell pb-10">
-          <div className="rounded-[18px] border border-[var(--border)] bg-[rgba(255,252,246,0.92)] px-6 py-8 shadow-[0_16px_34px_rgba(97,84,58,0.07)] sm:px-8">
+          <div className="rounded-[18px] border border-[var(--border)] bg-[rgba(255,252,246,0.88)] px-6 py-8 shadow-[0_16px_34px_rgba(97,84,58,0.05)] sm:px-8">
             <div className="grid gap-8 lg:grid-cols-[1.15fr_repeat(4,minmax(0,1fr))]">
               <div>
-                <div className="flex items-center gap-3">
+                <div className="flex items-center gap-4">
                   <Image
                     src="/images/carebridge-logo.png"
                     alt="CareBridge"
-                    width={48}
-                    height={48}
-                    className="h-11 w-11 rounded-[10px] object-contain"
+                    width={220}
+                    height={72}
+                    className="h-32 w-auto object-contain"
                   />
-                  <div>
-                    <div className="text-[11px] font-semibold uppercase tracking-[0.22em] text-[var(--accent-strong)]">
-                      Making Healthcare Easier to Reach
-                    </div>
-                    <div className="mt-1 text-2xl font-semibold text-[var(--foreground)]">{BRAND.name}</div>
-                  </div>
                 </div>
-                <div className="mt-3 max-w-xs text-sm leading-6 muted">{BRAND.shortDescription}</div>
-                <div className="mt-5 flex flex-wrap gap-3">
-                  <Link href="/providers" className="btn-secondary px-4 py-2 text-sm">
-                    Find care
-                  </Link>
-                  <Link href="/providers/join" className="btn-primary px-4 py-2 text-sm">
-                    Provider entry
-                  </Link>
-                </div>
+                <div className="-mt-3 max-w-xs text-sm leading-6 muted">{BRAND.shortDescription}</div>
               </div>
 
               {FOOTER_COLUMNS.map((column) => (

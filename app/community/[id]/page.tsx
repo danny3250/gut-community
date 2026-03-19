@@ -2,7 +2,8 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import ReplyComposer from "../ReplyComposer";
-import { fetchCommunityPostById, fetchCommunityReplies } from "@/lib/community";
+import ThreadEngagementBar from "../ThreadEngagementBar";
+import { fetchCommunityPostById, fetchCommunityReplies, getCommunityPostBadge } from "@/lib/community";
 import { getCurrentUserWithRole } from "@/lib/auth/session";
 import { fetchPatientByUserId } from "@/lib/carebridge/patients";
 import { fetchProviderByUserId, isProviderVerified } from "@/lib/carebridge/providers";
@@ -14,13 +15,12 @@ type CommunityThreadPageProps = {
 export default async function CommunityThreadPage({ params }: CommunityThreadPageProps) {
   const { id } = await params;
   const supabase = await createClient();
-  const [post, replies, session] = await Promise.all([
-    fetchCommunityPostById(supabase, id),
-    fetchCommunityReplies(supabase, id),
-    getCurrentUserWithRole(),
-  ]);
+  const session = await getCurrentUserWithRole();
+  const post = await fetchCommunityPostById(supabase, id, session.user?.id);
 
   if (!post) notFound();
+
+  const replies = await fetchCommunityReplies(supabase, id, post.source, session.user?.id);
 
   const author = Array.isArray(post.profiles) ? (post.profiles[0] ?? null) : post.profiles;
   const canReply = Boolean(session.user);
@@ -30,6 +30,7 @@ export default async function CommunityThreadPage({ params }: CommunityThreadPag
   const providerReplyHelper = session.role === "provider" && !canMarkOfficial
     ? "Verified provider responses activate after your provider application is approved."
     : null;
+  const postBadge = getCommunityPostBadge(post);
 
   return (
     <main className="shell space-y-8 py-6 sm:space-y-10 sm:py-10">
@@ -38,16 +39,30 @@ export default async function CommunityThreadPage({ params }: CommunityThreadPag
       </Link>
 
       <section className="panel px-6 py-8 sm:px-8">
-        {post.topic ? (
+        {postBadge ? (
           <div className="mb-4 inline-flex rounded-full bg-[var(--accent-soft)] px-3 py-1 text-xs font-semibold text-[var(--accent-strong)]">
-            {post.topic}
+            {postBadge}
           </div>
         ) : null}
         <h1 className="text-4xl font-semibold">{post.title}</h1>
         <p className="mt-4 max-w-3xl text-base leading-7 muted">{post.body}</p>
-        <div className="mt-5 flex flex-wrap gap-3 text-sm muted">
-          <span>{author?.display_name ?? "Community member"}</span>
-          <span>{new Date(post.created_at).toLocaleString()}</span>
+        <div className="mt-5 flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
+          <div className="flex flex-wrap gap-3 text-sm muted">
+            <span>{author?.display_name ?? "Community member"}</span>
+            <span>{new Date(post.created_at).toLocaleString()}</span>
+          </div>
+          <ThreadEngagementBar
+            targetType="thread"
+            source={post.source}
+            targetId={post.id}
+            initialScore={post.vote_score ?? 0}
+            initialUpvotes={post.upvote_count ?? 0}
+            initialDownvotes={post.downvote_count ?? 0}
+            initialUserVote={post.user_vote ?? 0}
+            initialSaved={post.is_saved ?? false}
+            canSave
+            canInteract={canReply}
+          />
         </div>
       </section>
 
@@ -99,6 +114,17 @@ export default async function CommunityThreadPage({ params }: CommunityThreadPag
 
                     <div className="text-sm leading-7">{reply.body}</div>
 
+                    <ThreadEngagementBar
+                      targetType="reply"
+                      source={reply.source}
+                      targetId={reply.id}
+                      initialScore={reply.vote_score ?? 0}
+                      initialUpvotes={reply.upvote_count ?? 0}
+                      initialDownvotes={reply.downvote_count ?? 0}
+                      initialUserVote={reply.user_vote ?? 0}
+                      canInteract={canReply}
+                    />
+
                     {isProviderResponse ? (
                       <div className="space-y-4 rounded-[24px] border border-[rgba(31,77,57,0.12)] bg-white/78 px-4 py-4">
                         <div className="flex flex-wrap gap-3">
@@ -141,7 +167,12 @@ export default async function CommunityThreadPage({ params }: CommunityThreadPag
             </p>
             <div className="mt-5">
               {canReply ? (
-                <ReplyComposer postId={post.id} canMarkOfficial={canMarkOfficial} helperMessage={providerReplyHelper} />
+                <ReplyComposer
+                  postId={post.id}
+                  source={post.source}
+                  canMarkOfficial={canMarkOfficial}
+                  helperMessage={providerReplyHelper}
+                />
               ) : (
                 <div className="space-y-4">
                   <div className="rounded-[22px] border border-[var(--border)] bg-white/72 px-4 py-4 text-sm muted">

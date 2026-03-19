@@ -1,4 +1,5 @@
 import Link from "next/link";
+import PublicBrandMark from "@/app/components/PublicBrandMark";
 import { BRAND } from "@/lib/config/brand";
 
 const principles = [
@@ -10,6 +11,7 @@ const principles = [
 export default function AboutPage() {
   return (
     <main className="shell space-y-8 py-6 sm:space-y-10 sm:py-10">
+      <PublicBrandMark />
       <section className="panel grid gap-6 px-6 py-8 sm:px-8 lg:grid-cols-[1.05fr_0.95fr]">
         <div className="space-y-4">
           <span className="eyebrow">About {BRAND.name}</span>

@@ -1,3 +1,5 @@
+import PublicBrandMark from "@/app/components/PublicBrandMark";
+
 const faqs = [
   {
     question: "Is CareBridge only for telehealth?",
@@ -20,6 +22,7 @@ const faqs = [
 export default function FaqPage() {
   return (
     <main className="shell space-y-8 py-6 sm:space-y-10 sm:py-10">
+      <PublicBrandMark />
       <section className="panel px-6 py-8 sm:px-8">
         <span className="eyebrow">FAQ</span>
         <h1 className="mt-4 text-4xl font-semibold">Questions people may have as CareBridge takes shape.</h1>
