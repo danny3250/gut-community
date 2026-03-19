@@ -1,3 +1,9 @@
+import {
+  CAREBRIDGE_POLICY_LAST_UPDATED,
+  CAREBRIDGE_SUPPORT_EMAIL,
+  CAREBRIDGE_TERMS_VERSION,
+} from "@/lib/carebridge/policies";
+
 const sections = [
   {
     title: "1. Acceptance of Terms",
@@ -151,7 +157,7 @@ const sections = [
   {
     title: "23. Contact",
     body: [
-      "For questions: support@CareBridge.com",
+      `For questions: ${CAREBRIDGE_SUPPORT_EMAIL}`,
     ],
   },
 ];
@@ -161,8 +167,8 @@ export default function TermsPage() {
     <main className="shell max-w-5xl space-y-8 py-8 sm:py-12">
       <section className="space-y-5">
         <span className="eyebrow">Terms & Conditions</span>
-        <h1 className="text-4xl font-semibold sm:text-5xl">CareBridge Terms & Conditions (v1)</h1>
-        <p className="text-sm leading-6 muted">Last Updated: March 19, 2026</p>
+        <h1 className="text-4xl font-semibold sm:text-5xl">CareBridge Terms & Conditions ({CAREBRIDGE_TERMS_VERSION})</h1>
+        <p className="text-sm leading-6 muted">Last Updated: {CAREBRIDGE_POLICY_LAST_UPDATED}</p>
         <p className="max-w-3xl text-sm leading-7 muted">
           These terms describe the rules, boundaries, and responsibilities that apply when users, providers, and
           organizations access CareBridge.

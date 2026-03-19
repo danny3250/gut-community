@@ -1,3 +1,9 @@
+import {
+  CAREBRIDGE_POLICY_LAST_UPDATED,
+  CAREBRIDGE_SUPPORT_EMAIL,
+  CAREBRIDGE_PRIVACY_VERSION,
+} from "@/lib/carebridge/policies";
+
 const sections = [
   {
     title: "1. Overview",
@@ -77,7 +83,7 @@ const sections = [
     title: "11. Your Rights",
     body: [
       "Depending on applicable laws, you may have the right to access your data, request corrections, request deletion where legally permitted, and export your information.",
-      "Requests can be submitted to support@CareBridge.com.",
+      `Requests can be submitted to ${CAREBRIDGE_SUPPORT_EMAIL}.`,
     ],
   },
   {
@@ -101,7 +107,7 @@ const sections = [
   {
     title: "15. Contact",
     body: [
-      "If you have questions about this Privacy Policy, contact support@CareBridge.com.",
+      `If you have questions about this Privacy Policy, contact ${CAREBRIDGE_SUPPORT_EMAIL}.`,
     ],
   },
 ];
@@ -111,8 +117,8 @@ export default function PrivacyPage() {
     <main className="shell max-w-5xl space-y-8 py-8 sm:py-12">
       <section className="space-y-5">
         <span className="eyebrow">Privacy Policy</span>
-        <h1 className="text-4xl font-semibold sm:text-5xl">CareBridge Privacy Policy (v1)</h1>
-        <p className="text-sm leading-6 muted">Last Updated: March 19, 2026</p>
+        <h1 className="text-4xl font-semibold sm:text-5xl">CareBridge Privacy Policy ({CAREBRIDGE_PRIVACY_VERSION})</h1>
+        <p className="text-sm leading-6 muted">Last Updated: {CAREBRIDGE_POLICY_LAST_UPDATED}</p>
         <p className="max-w-3xl text-sm leading-7 muted">
           This policy explains how CareBridge handles personal, operational, and health-related information across
           public content, authenticated workflows, provider interactions, and patient-support features.

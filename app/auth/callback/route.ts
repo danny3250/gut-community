@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createServerClient } from "@supabase/ssr";
+import { syncPolicyAcceptancesForUser } from "@/lib/carebridge/policy-acceptance";
 
 export async function GET(request: NextRequest) {
   const url = new URL(request.url);
@@ -32,6 +33,19 @@ export async function GET(request: NextRequest) {
   );
 
   await supabase.auth.exchangeCodeForSession(code);
+
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+
+  if (user) {
+    const forwardedFor = request.headers.get("x-forwarded-for");
+    const ipAddress = forwardedFor?.split(",")[0]?.trim() || null;
+    await syncPolicyAcceptancesForUser(user, {
+      ipAddress,
+      userAgent: request.headers.get("user-agent"),
+    });
+  }
 
   return response;
 }

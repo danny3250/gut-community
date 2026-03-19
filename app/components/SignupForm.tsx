@@ -3,6 +3,12 @@
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
+import {
+  CAREBRIDGE_POLICY_LAST_UPDATED,
+  CAREBRIDGE_PRIVACY_VERSION,
+  CAREBRIDGE_TERMS_VERSION,
+} from "@/lib/carebridge/policies";
+import { buildSignupPolicyMetadata } from "@/lib/carebridge/policy-acceptance";
 import { createSupabaseClient } from "@/lib/supabaseClient";
 
 export default function SignupForm({
@@ -17,11 +23,16 @@ export default function SignupForm({
 
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [acceptedPolicies, setAcceptedPolicies] = useState(false);
   const [msg, setMsg] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
 
   async function onSubmit(e: React.FormEvent) {
     e.preventDefault();
+    if (!acceptedPolicies) {
+      setMsg("You must agree to the Terms & Conditions and acknowledge the Privacy Policy before creating an account.");
+      return;
+    }
     setLoading(true);
     setMsg(null);
 
@@ -31,6 +42,7 @@ export default function SignupForm({
       options: {
         data: {
           requested_role: role,
+          ...buildSignupPolicyMetadata(),
         },
         emailRedirectTo: `${window.location.origin}/auth/callback?next=${encodeURIComponent(nextHref)}`,
       },
@@ -71,6 +83,27 @@ export default function SignupForm({
           required
         />
       </div>
+
+      <label className="flex items-start gap-3 rounded-2xl border border-[var(--border)] bg-white/70 px-4 py-4 text-sm leading-6">
+        <input
+          type="checkbox"
+          checked={acceptedPolicies}
+          onChange={(e) => setAcceptedPolicies(e.target.checked)}
+          className="mt-1 h-4 w-4 rounded border-[var(--border)] accent-[var(--accent)]"
+          required
+        />
+        <span>
+          I agree to the{" "}
+          <Link href="/terms" target="_blank" rel="noreferrer" className="font-semibold text-[var(--accent-strong)]">
+            Terms & Conditions
+          </Link>{" "}
+          and acknowledge the{" "}
+          <Link href="/privacy" target="_blank" rel="noreferrer" className="font-semibold text-[var(--accent-strong)]">
+            Privacy Policy
+          </Link>
+          . Current versions: Terms {CAREBRIDGE_TERMS_VERSION}, Privacy {CAREBRIDGE_PRIVACY_VERSION}. Last updated {CAREBRIDGE_POLICY_LAST_UPDATED}.
+        </span>
+      </label>
 
       <button className="btn-primary w-full" disabled={loading} type="submit">
         {loading ? (role === "provider" ? "Starting application..." : "Creating account...") : role === "provider" ? "Start provider application" : "Create account"}
