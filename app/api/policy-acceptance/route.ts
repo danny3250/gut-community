@@ -40,7 +40,7 @@ export async function POST(request: Request) {
     const ipAddress = forwardedFor?.split(",")[0]?.trim() || null;
 
     try {
-      await syncPolicyAcceptancesForUser(acceptedUser, {
+      await syncPolicyAcceptancesForUser(supabase, acceptedUser, {
         ipAddress,
         userAgent: request.headers.get("user-agent"),
       });

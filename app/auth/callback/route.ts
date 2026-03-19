@@ -41,7 +41,7 @@ export async function GET(request: NextRequest) {
   if (user) {
     const forwardedFor = request.headers.get("x-forwarded-for");
     const ipAddress = forwardedFor?.split(",")[0]?.trim() || null;
-    await syncPolicyAcceptancesForUser(user, {
+    await syncPolicyAcceptancesForUser(supabase, user, {
       ipAddress,
       userAgent: request.headers.get("user-agent"),
     });

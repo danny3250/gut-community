@@ -1,5 +1,4 @@
-import type { User } from "@supabase/supabase-js";
-import { createAdminClient } from "@/lib/supabase/admin";
+import type { SupabaseClient, User } from "@supabase/supabase-js";
 import {
   CAREBRIDGE_PRIVACY_VERSION,
   CAREBRIDGE_TERMS_VERSION,
@@ -13,6 +12,7 @@ type PolicyAcceptanceMetadata = {
 };
 
 export async function syncPolicyAcceptancesForUser(
+  supabase: SupabaseClient,
   user: User,
   context?: { ipAddress?: string | null; userAgent?: string | null }
 ) {
@@ -25,7 +25,6 @@ export async function syncPolicyAcceptancesForUser(
     return;
   }
 
-  const admin = createAdminClient();
   const rows = [
     termsVersion
       ? {
@@ -53,10 +52,24 @@ export async function syncPolicyAcceptancesForUser(
 
   if (rows.length === 0) return;
 
-  await admin.from("user_policy_acceptances").upsert(rows, {
-    onConflict: "user_id,policy_type,policy_version",
-    ignoreDuplicates: false,
-  });
+  const { data: existingRows, error: existingError } = await supabase
+    .from("user_policy_acceptances")
+    .select("policy_type,policy_version")
+    .eq("user_id", user.id);
+
+  if (existingError) throw existingError;
+
+  const existingKeys = new Set(
+    ((existingRows ?? []) as Array<{ policy_type: string; policy_version: string }>).map(
+      (row) => `${row.policy_type}:${row.policy_version}`
+    )
+  );
+
+  const rowsToInsert = rows.filter((row) => !existingKeys.has(`${row.policy_type}:${row.policy_version}`));
+  if (rowsToInsert.length === 0) return;
+
+  const { error: insertError } = await supabase.from("user_policy_acceptances").insert(rowsToInsert);
+  if (insertError) throw insertError;
 }
 
 export function buildSignupPolicyMetadata() {
@@ -75,4 +88,3 @@ export function hasCurrentRequiredPolicyAcceptance(user: User | null | undefined
     metadata.privacy_version === CAREBRIDGE_PRIVACY_VERSION
   );
 }
-
