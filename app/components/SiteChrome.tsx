@@ -85,7 +85,7 @@ export default function SiteChrome({ children, isAuthenticated, userEmail }: Sit
     <div className="relative min-h-screen bg-[var(--background)]">
       <div className="absolute inset-x-0 top-0 -z-10 h-[34rem] bg-[radial-gradient(circle_at_top_left,rgba(79,182,168,0.18),transparent_35%),radial-gradient(circle_at_top_right,rgba(109,190,69,0.14),transparent_28%),linear-gradient(180deg,rgba(255,255,255,0.6),transparent_70%)]" />
 
-      <header className="sticky top-0 z-40">
+      <header className="site-header sticky top-0 z-40">
         <div
           className={`transition-all duration-300 ${
             scrolled
@@ -218,7 +218,7 @@ export default function SiteChrome({ children, isAuthenticated, userEmail }: Sit
       <main className={hideFooter ? "pb-0" : "pb-20"}>{children}</main>
 
       {hideFooter ? null : (
-        <footer className="shell pb-10">
+        <footer className="site-footer shell pb-10">
           <div className="rounded-[18px] border border-[var(--border)] bg-[rgba(255,252,246,0.88)] px-6 py-8 shadow-[0_16px_34px_rgba(97,84,58,0.05)] sm:px-8">
             <div className="grid gap-8 lg:grid-cols-[1.15fr_repeat(4,minmax(0,1fr))]">
               <div>

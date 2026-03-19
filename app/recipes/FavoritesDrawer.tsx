@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useEffect, useState } from "react";
 import { createClient } from "@/lib/supabase/client";
+import AddToShoppingListButton from "./AddToShoppingListButton";
 
 type RecipeRow = {
   id: string;
@@ -28,9 +29,58 @@ export default function FavoritesDrawer({
   const [loading, setLoading] = useState(false);
   const [recipes, setRecipes] = useState<RecipeRow[]>([]);
   const [err, setErr] = useState<string | null>(null);
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+
+  function toggleSelected(recipeId: string) {
+    setSelectedIds((current) => {
+      const next = new Set(current);
+      if (next.has(recipeId)) {
+        next.delete(recipeId);
+      } else {
+        next.add(recipeId);
+      }
+      return next;
+    });
+  }
+
+  function printSelected() {
+    const ids = Array.from(selectedIds);
+    if (ids.length === 0) return;
+
+    onClose();
+    const iframe = document.createElement("iframe");
+    iframe.style.position = "fixed";
+    iframe.style.right = "0";
+    iframe.style.bottom = "0";
+    iframe.style.width = "0";
+    iframe.style.height = "0";
+    iframe.style.border = "0";
+    iframe.style.visibility = "hidden";
+    iframe.src = `/recipes/print?recipes=${ids.join(",")}`;
+
+    const cleanup = () => {
+      window.setTimeout(() => {
+        iframe.remove();
+      }, 400);
+    };
+
+    iframe.onload = () => {
+      window.setTimeout(() => {
+        try {
+          iframe.contentWindow?.focus();
+          iframe.contentWindow?.print();
+        } finally {
+          cleanup();
+        }
+      }, 180);
+    };
+
+    document.body.appendChild(iframe);
+  }
 
   useEffect(() => {
     if (!open) return;
+    setSelectedIds(new Set());
 
     (async () => {
       setLoading(true);
@@ -100,6 +150,22 @@ export default function FavoritesDrawer({
           </button>
         </div>
 
+        {recipes.length > 0 ? (
+          <div className="mt-4 flex items-center justify-between gap-3 border-b border-[var(--border)] pb-3">
+            <div className="text-sm muted">
+              {selectedIds.size > 0 ? `${selectedIds.size} selected` : "Select recipes to print"}
+            </div>
+            <button
+              type="button"
+              onClick={printSelected}
+              disabled={selectedIds.size === 0}
+              className={selectedIds.size === 0 ? "btn-secondary px-4 py-2 text-sm opacity-50" : "btn-secondary px-4 py-2 text-sm"}
+            >
+              Print selected
+            </button>
+          </div>
+        ) : null}
+
         <div className="mt-4 flex-1 space-y-2 overflow-auto">
           {err ? <div className="text-sm">Error: {err}</div> : null}
 
@@ -111,19 +177,34 @@ export default function FavoritesDrawer({
             </div>
           ) : (
             recipes.map((recipe) => (
-              <Link
-                key={recipe.id}
-                href={`/recipes/${recipe.slug ?? fallbackSlug(recipe.name ?? recipe.title ?? recipe.id)}`}
-                onClick={onClose}
-                className="block rounded-lg border p-3 transition hover:bg-black/5"
-              >
-                <div className="font-medium">{recipe.name ?? recipe.title ?? "Recipe"}</div>
-                {recipe.summary ?? recipe.description ? (
-                  <div className="mt-1 line-clamp-2 text-sm opacity-80">
-                    {recipe.summary ?? recipe.description}
+              <div key={recipe.id} className="rounded-lg border p-3">
+                <div className="flex items-start gap-3">
+                  <input
+                    type="checkbox"
+                    checked={selectedIds.has(recipe.id)}
+                    onChange={() => toggleSelected(recipe.id)}
+                    className="mt-1 h-4 w-4 rounded border-[var(--border)] accent-[var(--accent)]"
+                    aria-label={`Select ${recipe.name ?? recipe.title ?? "recipe"}`}
+                  />
+                  <div className="min-w-0 flex-1">
+                    <Link
+                      href={`/recipes/${recipe.slug ?? fallbackSlug(recipe.name ?? recipe.title ?? recipe.id)}`}
+                      onClick={onClose}
+                      className="block transition hover:bg-black/5"
+                    >
+                      <div className="font-medium">{recipe.name ?? recipe.title ?? "Recipe"}</div>
+                      {recipe.summary ?? recipe.description ? (
+                        <div className="mt-1 line-clamp-2 text-sm opacity-80">
+                          {recipe.summary ?? recipe.description}
+                        </div>
+                      ) : null}
+                    </Link>
                   </div>
-                ) : null}
-              </Link>
+                </div>
+                <div className="mt-3">
+                  <AddToShoppingListButton recipeId={recipe.id} className="btn-secondary inline-flex px-4 py-2 text-sm" />
+                </div>
+              </div>
             ))
           )}
         </div>

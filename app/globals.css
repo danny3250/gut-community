@@ -199,3 +199,164 @@ textarea {
     transform: translateY(0);
   }
 }
+
+@media print {
+  @page {
+    margin: 0.45in;
+  }
+
+  body {
+    background: white !important;
+    color: #111 !important;
+    font-size: 10.5pt !important;
+  }
+
+  .site-header,
+  .site-footer,
+  .recipe-shopping-list-actions,
+  .eyebrow {
+    display: none !important;
+  }
+
+  .recipe-shopping-list-page {
+    max-width: none !important;
+    padding: 0 !important;
+    margin: 0 !important;
+    gap: 0.8rem !important;
+  }
+
+  .recipe-shopping-list-page .workspace-section {
+    border-top: 0 !important;
+    padding-top: 0 !important;
+    margin-top: 0 !important;
+    break-inside: avoid;
+  }
+
+  .recipe-shopping-list-page h1 {
+    font-size: 20pt !important;
+    line-height: 1.08 !important;
+    margin-top: 0 !important;
+  }
+
+  .recipe-shopping-list-page h2 {
+    font-size: 13pt !important;
+    line-height: 1.15 !important;
+  }
+
+  .recipe-shopping-list-page p,
+  .recipe-shopping-list-page .muted,
+  .recipe-shopping-list-page .text-sm,
+  .recipe-shopping-list-page .text-base {
+    font-size: 9pt !important;
+    line-height: 1.25 !important;
+  }
+
+  .recipe-shopping-list-page .max-w-3xl {
+    max-width: none !important;
+  }
+
+  .recipe-shopping-list-page a {
+    color: #111 !important;
+    text-decoration: none !important;
+  }
+
+  .recipe-shopping-list-page .recipe-shopping-list-recipe {
+    background: transparent !important;
+    border: 1px solid #ccc !important;
+  }
+
+  .recipe-shopping-list-page .recipe-shopping-list-adjust {
+    display: none !important;
+  }
+
+  .recipe-shopping-list-page .recipe-shopping-list-recipe {
+    padding: 0.22rem 0.5rem !important;
+    font-size: 8.5pt !important;
+    gap: 0.35rem !important;
+  }
+
+  .recipe-shopping-list-page .data-row {
+    border-top: 1px solid #ddd !important;
+    padding: 0.32rem 0 !important;
+  }
+
+  .recipe-print-actions {
+    display: none !important;
+  }
+
+  .recipe-print-intro {
+    display: none !important;
+  }
+
+  .recipe-print-page {
+    max-width: none !important;
+    padding: 0 !important;
+    margin: 0 !important;
+    gap: 0.2rem !important;
+  }
+
+  .recipe-print-page .workspace-section,
+  .recipe-print-page .recipe-print-card {
+    border-top: 0 !important;
+    padding-top: 0 !important;
+    margin-top: 0 !important;
+    break-inside: avoid;
+  }
+
+  .recipe-print-page > * + *,
+  .recipe-print-page .space-y-10 > * + *,
+  .recipe-print-page .space-y-8 > * + * {
+    margin-top: 0.35rem !important;
+  }
+
+  .recipe-print-page h1 {
+    font-size: 17pt !important;
+    line-height: 1.08 !important;
+    margin-top: 0 !important;
+    margin-bottom: 0.15rem !important;
+  }
+
+  .recipe-print-page h2 {
+    font-size: 13pt !important;
+    line-height: 1.12 !important;
+    margin-top: 0 !important;
+    margin-bottom: 0.15rem !important;
+  }
+
+  .recipe-print-page p,
+  .recipe-print-page li,
+  .recipe-print-page .muted,
+  .recipe-print-page .text-sm,
+  .recipe-print-page .text-base {
+    font-size: 9pt !important;
+    line-height: 1.28 !important;
+  }
+
+  .recipe-print-page span {
+    color: #111 !important;
+  }
+
+  .recipe-print-page .recipe-print-card {
+    page-break-inside: avoid;
+    margin-bottom: 0.3rem !important;
+  }
+
+  .recipe-print-page > section:first-child + section,
+  .recipe-print-page > .space-y-10:first-of-type {
+    margin-top: 0 !important;
+  }
+
+  .recipe-print-page .mt-6,
+  .recipe-print-page .mt-5,
+  .recipe-print-page .mt-4,
+  .recipe-print-page .mt-3,
+  .recipe-print-page .mt-2 {
+    margin-top: 0.3rem !important;
+  }
+
+  .recipe-print-page .grid,
+  .recipe-print-page .space-y-10,
+  .recipe-print-page .space-y-8 {
+    gap: 0.4rem !important;
+  }
+}
